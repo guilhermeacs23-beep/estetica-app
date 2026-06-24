@@ -1,33 +1,25 @@
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4"
-      style={{ background: "var(--bg)" }}
-    >
-      <div className="w-full flex flex-col items-center" style={{ maxWidth: "360px" }}>
+    <div className="auth-bg">
+      {/* blobs de luz */}
+      <div className="auth-blob auth-blob-1" />
+      <div className="auth-blob auth-blob-2" />
 
+      <div className="auth-wrapper">
         {/* LOGO */}
-        <div className="mb-8 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="Studio RPM"
-            style={{ width: "220px", objectFit: "contain" }}
-          />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Studio RPM" className="auth-logo" />
+
+        {/* Card glass */}
+        <div className="auth-glass">
+          {children}
         </div>
 
-        {/* Card */}
-        {children}
-
         {/* Rodapé Valora */}
-        <div className="mt-8 flex flex-col items-center gap-1" style={{ color: "var(--text-subtle)" }}>
-          <span className="text-xs">Desenvolvido por</span>
+        <div className="auth-footer">
+          <span>Desenvolvido por</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/valora-logo.svg"
-            alt="Valora Business Technology"
-            style={{ width: "130px", opacity: 0.75, objectFit: "contain" }}
-          />
+          <img src="/valora-logo.svg" alt="Valora" className="auth-valora" />
         </div>
       </div>
     </div>
