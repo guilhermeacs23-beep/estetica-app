@@ -87,7 +87,7 @@ export default function LoginPage() {
 
       <p className="auth-link-text">
         Não tem conta?{" "}
-        <Link href="/cadastro" className="auth-link">Cadastrar estética</Link>
+        <Link href="/cadastro" className="auth-link">Cadastrar usuário</Link>
       </p>
     </form>
   );

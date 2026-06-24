@@ -189,14 +189,15 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   display: flex;
   align-items: center;
   justify-content: center;
+  /* fade suave das bordas para o fundo preto */
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 55%, transparent 100%);
 }
 
 .auth-logo {
-  width: 220px;
+  width: 240px;
   object-fit: contain;
-  /* remove o fundo preto do PNG sem editar o arquivo */
   mix-blend-mode: screen;
-  filter: drop-shadow(0 0 24px rgba(196,30,58,0.5));
 }
 
 /* card glass */
