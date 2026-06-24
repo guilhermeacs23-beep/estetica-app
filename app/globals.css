@@ -184,11 +184,19 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   max-width: 360px;
 }
 
-.auth-logo {
-  width: 200px;
-  object-fit: contain;
+.auth-logo-wrap {
   margin-bottom: 2rem;
-  filter: drop-shadow(0 0 20px rgba(196,30,58,0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-logo {
+  width: 220px;
+  object-fit: contain;
+  /* remove o fundo preto do PNG sem editar o arquivo */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 24px rgba(196,30,58,0.5));
 }
 
 /* card glass */
@@ -316,7 +324,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   font-size: 0.75rem;
 }
 .auth-valora {
-  width: 110px;
-  opacity: 0.6;
+  width: 130px;
+  opacity: 0.8;
   object-fit: contain;
 }
