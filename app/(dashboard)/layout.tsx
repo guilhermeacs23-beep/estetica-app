@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/login");
 
   const { data: profile } = await supabaseAdmin
-    .schema("rpm").from("profiles").select("*, tenants(*)").eq("id", user.id).single();
+    .from("profiles").select("*, tenants(*)").eq("id", user.id).single();
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>

@@ -23,19 +23,19 @@ export async function POST(req: NextRequest) {
     // 2. Criar tenant
     const slug = slugify(nomeEstetica) + "-" + Math.random().toString(36).slice(2, 6);
     const { data: tenant, error: tenantErr } = await supabaseAdmin
-      .schema("rpm").from("tenants").insert({ nome: nomeEstetica, slug }).select().single();
+      .from("tenants").insert({ nome: nomeEstetica, slug }).select().single();
     if (tenantErr) { await supabaseAdmin.auth.admin.deleteUser(userId); return NextResponse.json({ error: tenantErr.message }, { status: 500 }); }
 
     // 3. Criar profile
     const { error: profileErr } = await supabaseAdmin
-      .schema("rpm").from("profiles").insert({
+      .from("profiles").insert({
         id: userId, tenant_id: tenant.id, nome: nomeResponsavel,
         email, role: "owner", ativo: true,
       });
     if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
 
     // 4. Criar configuração padrão
-    await supabaseAdmin.schema("rpm").from("configuracoes").insert({
+    await supabaseAdmin.from("configuracoes").insert({
       tenant_id: tenant.id, nome_fantasia: nomeEstetica,
       vagas_dia: 5, horario_abertura: "08:00", horario_fechamento: "18:00",
     });
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       tenant_id: tenant.id, nome,
       tipo: ["dinheiro", "pix", "credito", "debito"][i],
     }));
-    await supabaseAdmin.schema("rpm").from("formas_pagamento").insert(formas);
+    await supabaseAdmin.from("formas_pagamento").insert(formas);
 
     // 6. Sign in para setar cookie de sessão
     const { error: signInErr } = await supabaseAdmin.auth.admin.generateLink({

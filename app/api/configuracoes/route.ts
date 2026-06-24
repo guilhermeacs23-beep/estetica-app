@@ -5,9 +5,9 @@ export async function PATCH(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user.id).single();
   const body = await req.json();
-  const { error } = await supabaseAdmin.schema("rpm").from("configuracoes").update(body).eq("tenant_id", profile!.tenant_id);
+  const { error } = await supabaseAdmin.from("configuracoes").update(body).eq("tenant_id", profile!.tenant_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

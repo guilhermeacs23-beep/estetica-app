@@ -5,8 +5,8 @@ import Link from "next/link";
 export default async function ClientesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
-  const { data: clientes } = await supabaseAdmin.schema("rpm").from("clientes")
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: clientes } = await supabaseAdmin.from("clientes")
     .select("id, nome, telefone, whatsapp, email, created_at")
     .eq("tenant_id", profile!.tenant_id).order("nome");
 

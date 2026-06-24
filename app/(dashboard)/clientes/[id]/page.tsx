@@ -12,12 +12,12 @@ export default async function ClienteDetalhePage({ params }: { params: Promise<{
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
 
   const [{ data: cliente }, { data: veiculos }, { data: ordens }] = await Promise.all([
-    supabaseAdmin.schema("rpm").from("clientes").select("*").eq("id", id).eq("tenant_id", profile!.tenant_id).single(),
-    supabaseAdmin.schema("rpm").from("veiculos").select("*").eq("cliente_id", id).order("created_at"),
-    supabaseAdmin.schema("rpm").from("ordens_servico").select("id, numero, status, data_entrada, valor_final, veiculos(placa, modelo)")
+    supabaseAdmin.from("clientes").select("*").eq("id", id).eq("tenant_id", profile!.tenant_id).single(),
+    supabaseAdmin.from("veiculos").select("*").eq("cliente_id", id).order("created_at"),
+    supabaseAdmin.from("ordens_servico").select("id, numero, status, data_entrada, valor_final, veiculos(placa, modelo)")
       .eq("cliente_id", id).order("created_at", { ascending: false }).limit(20),
   ]);
   if (!cliente) notFound();

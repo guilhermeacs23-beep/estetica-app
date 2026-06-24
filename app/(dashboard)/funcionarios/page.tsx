@@ -5,8 +5,8 @@ import FuncionariosList from "@/components/FuncionariosList";
 export default async function FuncionariosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
-  const { data: funcionarios } = await supabaseAdmin.schema("rpm").from("funcionarios")
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: funcionarios } = await supabaseAdmin.from("funcionarios")
     .select("*").eq("tenant_id", profile!.tenant_id).order("nome");
   return <FuncionariosList funcionarios={funcionarios ?? []} tenantId={profile!.tenant_id} />;
 }

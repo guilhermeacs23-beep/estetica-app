@@ -9,10 +9,10 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function TecnicoPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
   const hoje = new Date().toISOString().split("T")[0];
 
-  const { data: ordens } = await supabaseAdmin.schema("rpm").from("ordens_servico")
+  const { data: ordens } = await supabaseAdmin.from("ordens_servico")
     .select("id, numero, status, hora_entrada, clientes(nome), veiculos(placa, modelo, cor), os_servicos(nome)")
     .eq("tenant_id", profile!.tenant_id).eq("data_entrada", hoje)
     .neq("status", "entregue").neq("status", "recusado").order("hora_entrada");

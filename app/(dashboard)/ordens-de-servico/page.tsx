@@ -11,9 +11,9 @@ export default async function OSListPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
 
-  let query = supabaseAdmin.schema("rpm").from("ordens_servico")
+  let query = supabaseAdmin.from("ordens_servico")
     .select("id, numero, status, data_entrada, hora_entrada, valor_final, clientes(nome), veiculos(placa, modelo, cor)")
     .eq("tenant_id", profile!.tenant_id)
     .order("created_at", { ascending: false })

@@ -10,16 +10,16 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
 
   const hoje = params.data ?? new Date().toISOString().split("T")[0];
 
-  const { data: ordens } = await supabaseAdmin.schema("rpm").from("ordens_servico")
+  const { data: ordens } = await supabaseAdmin.from("ordens_servico")
     .select("id, numero, status, hora_entrada, vaga, clientes(nome), veiculos(placa, modelo)")
     .eq("tenant_id", profile!.tenant_id).eq("data_entrada", hoje)
     .order("hora_entrada");
 
-  const { data: config } = await supabaseAdmin.schema("rpm").from("configuracoes")
+  const { data: config } = await supabaseAdmin.from("configuracoes")
     .select("vagas_dia").eq("tenant_id", profile!.tenant_id).single();
   const vagasDia = config?.vagas_dia ?? 5;
 

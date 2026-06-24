@@ -7,13 +7,13 @@ async function getKPIs(tenantId: string) {
   const mesInicio = hoje.slice(0, 7) + "-01";
 
   const [{ count: osHoje }, { count: osMes }, { data: faturamento }] = await Promise.all([
-    supabaseAdmin.schema("rpm").from("ordens_servico")
+    supabaseAdmin.from("ordens_servico")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId).eq("data_entrada", hoje),
-    supabaseAdmin.schema("rpm").from("ordens_servico")
+    supabaseAdmin.from("ordens_servico")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId).gte("data_entrada", mesInicio),
-    supabaseAdmin.schema("rpm").from("ordens_servico")
+    supabaseAdmin.from("ordens_servico")
       .select("valor_final")
       .eq("tenant_id", tenantId).gte("data_entrada", mesInicio)
       .in("status", ["finalizado", "entregue"]),
@@ -26,7 +26,7 @@ async function getKPIs(tenantId: string) {
 }
 
 async function getOSRecentes(tenantId: string) {
-  const { data } = await supabaseAdmin.schema("rpm").from("ordens_servico")
+  const { data } = await supabaseAdmin.from("ordens_servico")
     .select("id, numero, status, data_entrada, clientes(nome), veiculos(placa, modelo)")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
@@ -42,7 +42,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
   const tenantId = profile?.tenant_id;
 
   const [kpis, recentes] = await Promise.all([

@@ -4,19 +4,19 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export default async function DashFinanceiroPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabaseAdmin.schema("rpm").from("profiles").select("tenant_id").eq("id", user!.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user!.id).single();
   const tid = profile!.tenant_id;
 
   const hoje = new Date().toISOString().split("T")[0];
   const mesInicio = hoje.slice(0, 7) + "-01";
 
   const [{ data: mesData }, { data: hojeData }, { data: topServicos }] = await Promise.all([
-    supabaseAdmin.schema("rpm").from("ordens_servico")
+    supabaseAdmin.from("ordens_servico")
       .select("valor_final, data_entrada").eq("tenant_id", tid)
       .gte("data_entrada", mesInicio).in("status", ["finalizado", "entregue"]),
-    supabaseAdmin.schema("rpm").from("ordens_servico")
+    supabaseAdmin.from("ordens_servico")
       .select("valor_final").eq("tenant_id", tid).eq("data_entrada", hoje).in("status", ["finalizado", "entregue"]),
-    supabaseAdmin.schema("rpm").from("os_servicos")
+    supabaseAdmin.from("os_servicos")
       .select("nome, preco").limit(100),
   ]);
 
