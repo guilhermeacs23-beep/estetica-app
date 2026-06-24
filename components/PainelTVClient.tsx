@@ -5,7 +5,7 @@ const STATUS_LABEL: Record<string, string> = {
   aguardando:"Aguardando",aceito:"Aceito",em_atendimento:"Em Atendimento",finalizado:"Finalizado",entregue:"Entregue",
 };
 const STATUS_COLOR: Record<string, string> = {
-  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#f97316",finalizado:"#22c55e",entregue:"#a855f7",
+  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#C41E3A",finalizado:"#22c55e",entregue:"#a855f7",
 };
 
 function Clock() {
@@ -56,7 +56,7 @@ export default function PainelTVClient({ ordens, nomeTenant }: { ordens: any[]; 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: "#F97316" }}>R</div>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: "#C41E3A" }}>R</div>
           <div>
             <p className="text-xs font-medium" style={{ color: "#666" }}>PAINEL DE ATENDIMENTO</p>
             <p className="text-lg font-bold" style={{ color: "#fff" }}>{nomeTenant}</p>
@@ -70,7 +70,7 @@ export default function PainelTVClient({ ordens, nomeTenant }: { ordens: any[]; 
         {[
           { key: "aguardando",    label: "Aguardando",    color: "#eab308" },
           { key: "aceito",        label: "Aceito",        color: "#3b82f6" },
-          { key: "em_atendimento",label: "Em Atendimento",color: "#f97316" },
+          { key: "em_atendimento",label: "Em Atendimento",color: "#C41E3A" },
           { key: "finalizado",    label: "Finalizado",    color: "#22c55e" },
           { key: "entregue",      label: "Entregue",      color: "#a855f7" },
         ].map(s => (
@@ -84,20 +84,20 @@ export default function PainelTVClient({ ordens, nomeTenant }: { ordens: any[]; 
       {/* Em atendimento agora */}
       {emAtendimento.length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#f97316" }}>Em Atendimento Agora</p>
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#C41E3A" }}>Em Atendimento Agora</p>
           <div className="grid grid-cols-2 gap-4">
             {emAtendimento.map(o => {
               const prog = getProgresso(o);
               const servicos = o.os_servicos?.map((s: any) => s.nome).join(", ");
               const tecnico = o.os_servicos?.find((s: any) => s.funcionarios)?.funcionarios?.nome;
               return (
-                <div key={o.id} className="rounded-xl p-5" style={{ background: "#111", border: "1px solid #f9731622" }}>
+                <div key={o.id} className="rounded-xl p-5" style={{ background: "#111", border: "1px solid #C41E3A22" }}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="text-xs" style={{ color: "#666" }}>{o.hora_entrada} → {o.hora_saida_prevista ?? "--:--"}</p>
                       <p className="text-lg font-bold mt-1" style={{ color: "#fff" }}>{servicos || "—"}</p>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full font-semibold" style={{ background: "#f9731622", color: "#f97316" }}>Em Atendimento</span>
+                    <span className="text-xs px-2 py-1 rounded-full font-semibold" style={{ background: "#C41E3A22", color: "#C41E3A" }}>Em Atendimento</span>
                   </div>
                   <div className="flex items-center gap-2 mb-1 text-sm" style={{ color: "#aaa" }}>
                     <span>🚗</span><span className="font-bold" style={{ color: "#fff" }}>{o.veiculos?.placa}</span>
@@ -105,7 +105,7 @@ export default function PainelTVClient({ ordens, nomeTenant }: { ordens: any[]; 
                   </div>
                   {tecnico && <p className="text-xs mb-3" style={{ color: "#666" }}>👷 {tecnico}</p>}
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "#222" }}>
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${prog}%`, background: "#f97316" }} />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${prog}%`, background: "#C41E3A" }} />
                   </div>
                   <p className="text-xs text-right mt-1" style={{ color: "#666" }}>{prog}%</p>
                 </div>

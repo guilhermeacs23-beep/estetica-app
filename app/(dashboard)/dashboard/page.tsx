@@ -86,7 +86,7 @@ export default async function DashboardPage() {
       {/* Atalhos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {ATALHOS.map(a => (
-          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 text-center hover:border-orange-500 transition-colors cursor-pointer">
+          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 text-center hover:border-red-700 transition-colors cursor-pointer">
             <span className="text-3xl">{a.icon}</span>
             <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{a.label}</span>
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>{a.desc}</span>

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import Link from "next/link";
 
 const STATUS_COLOR: Record<string, string> = {
-  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#f97316",finalizado:"#22c55e",entregue:"#a855f7",recusado:"#ef4444",
+  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#C41E3A",finalizado:"#22c55e",entregue:"#a855f7",recusado:"#ef4444",
 };
 
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ data?: string }> }) {

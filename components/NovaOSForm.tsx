@@ -178,7 +178,7 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
               <label key={item} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5">
                 <input type="checkbox" checked={checklist[item] ?? false}
                   onChange={e => setChecklist(p => ({ ...p, [item]: e.target.checked }))}
-                  className="w-4 h-4 accent-orange-500" />
+                  className="w-4 h-4 accent-red-700" />
                 <span className="text-sm" style={{ color: checklist[item] ? "var(--danger)" : "var(--text-muted)" }}>{item}</span>
               </label>
             ))}
@@ -203,7 +203,7 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
               const sel = itensOS.find(i => i.servicoId === s.id);
               return (
                 <button key={s.id} onClick={() => sel ? setItensOS(p => p.filter(i => i.servicoId !== s.id)) : adicionarServico(s)}
-                  className={`card text-left transition-colors ${sel ? "border-orange-500" : ""}`}
+                  className={`card text-left transition-colors ${sel ? "border-red-700" : ""}`}
                   style={{ borderColor: sel ? "var(--primary)" : undefined }}>
                   <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{s.nome}</p>
                   <p className="text-xs mt-1" style={{ color: "var(--primary)" }}>R$ {s.preco_base.toFixed(2).replace(".", ",")}</p>

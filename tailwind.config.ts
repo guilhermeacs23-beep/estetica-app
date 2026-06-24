@@ -9,30 +9,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // === PALETA STUDIO RPM ===
-        // Troque estas cores pela sua paleta própria
         primary: {
-          DEFAULT: "#F97316", // laranja principal
-          50:  "#fff7ed",
-          100: "#ffedd5",
-          200: "#fed7aa",
-          300: "#fdba74",
-          400: "#fb923c",
-          500: "#f97316",
-          600: "#ea580c",
-          700: "#c2410c",
-          800: "#9a3412",
-          900: "#7c2d12",
+          DEFAULT: "#C41E3A",
+          dark:    "#A01830",
+          light:   "#D94055",
+        },
+        silver: {
+          DEFAULT: "#C0C0C0",
+          dark:    "#9CA3AF",
         },
         surface: {
-          DEFAULT: "#111111",
-          50:  "#fafafa",
-          100: "#f5f5f5",
-          800: "#1a1a1a",
+          DEFAULT: "#141414",
           900: "#0f0f0f",
-          950: "#080808",
+          950: "#0a0a0a",
         },
-        border: "#2a2a2a",
+        border: "#252525",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
