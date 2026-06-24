@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 50" width="180" height="50">
+  <!-- fundo escuro arredondado -->
+  <rect width="180" height="50" rx="10" fill="#0d0d1a"/>
+  
+  <!-- ícone V estilizado com gradiente azul/ciano -->
+  <defs>
+    <linearGradient id="vgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff"/>
+      <stop offset="100%" style="stop-color:#0066cc"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- V shape -->
+  <polygon points="10,10 20,10 28,32 36,10 46,10 32,42 24,42" fill="url(#vgrad)"/>
+  
+  <!-- linha decorativa abaixo do V -->
+  <rect x="10" y="44" width="36" height="2" rx="1" fill="url(#vgrad)" opacity="0.6"/>
+  
+  <!-- Texto VALORA -->
+  <text x="54" y="22" font-family="Arial Black, sans-serif" font-weight="900" font-size="16" fill="white" letter-spacing="2">VALORA</text>
+  
+  <!-- Texto Business Technology -->
+  <text x="54" y="37" font-family="Arial, sans-serif" font-weight="400" font-size="9" fill="#8899bb" letter-spacing="1.5">BUSINESS TECHNOLOGY</text>
+</svg>
