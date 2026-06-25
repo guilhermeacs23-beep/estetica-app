@@ -178,4 +178,3 @@ export default function OSDetalheClient({ os, profile, funcionarios }: any) {
     </div>
   );
 }
-                         
