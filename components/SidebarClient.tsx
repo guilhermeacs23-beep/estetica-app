@@ -43,10 +43,14 @@ export default function SidebarClient({ profile }: { profile: any }) {
       }}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b gap-3" style={{ borderColor: "var(--border)" }}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>R</div>
-        {!collapsed && <span className="font-bold text-base" style={{ color: "var(--text)" }}>Studio RPM</span>}
-        <button onClick={() => setCollapsed(!collapsed)} className="ml-auto btn btn-icon btn-ghost" style={{ fontSize: 12 }}>
+      <div className="flex items-center border-b" style={{ borderColor: "var(--border)", minHeight: 72, padding: collapsed ? "0 12px" : "0 16px" }}>
+        {collapsed ? (
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>R</div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/logo.png" alt="Studio RPM" style={{ width: 150, objectFit: "contain", mixBlendMode: "screen" }} />
+        )}
+        <button onClick={() => setCollapsed(!collapsed)} className="ml-auto btn btn-icon btn-ghost flex-shrink-0" style={{ fontSize: 12 }}>
           {collapsed ? "▶" : "◀"}
         </button>
       </div>
