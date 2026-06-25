@@ -9,7 +9,7 @@ const NAV = [
   { href: "/dashboard-financeiro", label: "Financeiro",         icon: "F" },
   { href: "/ordens-de-servico",    label: "Ordens de Servico",  icon: "O" },
   { href: "/agenda",               label: "Agenda",             icon: "A" },
-  { href: "/painel-tv",            label: "Painel TV",          icon: "T", newTab: true },
+  { href: "https://estetica-app-theta.vercel.app/painel-tv", label: "Painel TV", icon: "T", newTab: true },
   { divider: true },
   { href: "/clientes",             label: "Clientes",           icon: "C" },
   { href: "/veiculos",             label: "Veiculos",           icon: "V" },
