@@ -3,7 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import Link from "next/link";
 
 const STATUS_COLOR: Record<string, string> = {
-  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#C41E3A",finalizado:"#22c55e",entregue:"#a855f7",recusado:"#ef4444",
+  aguardando:"#eab308",aceito:"#3b82f6",em_atendimento:"#f97316",finalizado:"#22c55e",entregue:"#a855f7",recusado:"#ef4444",
+};
+const STATUS_LABEL: Record<string, string> = {
+  aguardando:"Aguardando",aceito:"Aceito",em_atendimento:"Em Atendimento",finalizado:"Finalizado",entregue:"Entregue",recusado:"Recusado",
 };
 
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ data?: string }> }) {
@@ -15,66 +18,65 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const hoje = params.data ?? new Date().toISOString().split("T")[0];
 
   const { data: ordens } = await supabaseAdmin.from("ordens_servico")
-    .select("id, numero, status, hora_entrada, vaga, clientes(nome), veiculos(placa, modelo)")
+    .select("id, numero, status, hora_entrada, clientes(nome), veiculos(placa, modelo, cor), os_servicos(nome)")
     .eq("tenant_id", profile!.tenant_id).eq("data_entrada", hoje)
-    .order("hora_entrada");
-
-  const { data: config } = await supabaseAdmin.from("configuracoes")
-    .select("vagas_dia").eq("tenant_id", profile!.tenant_id).single();
-  const vagasDia = config?.vagas_dia ?? 5;
+    .neq("status", "recusado").order("hora_entrada");
 
   const prevDay = new Date(hoje + "T12:00");
   prevDay.setDate(prevDay.getDate() - 1);
   const nextDay = new Date(hoje + "T12:00");
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const vagas = Array.from({ length: vagasDia }, (_, i) => i + 1);
+  const dataBR = new Date(hoje + "T12:00").toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" });
+  const isHoje = hoje === new Date().toISOString().split("T")[0];
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6" style={{ maxWidth: 860 }}>
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Agenda</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{new Date(hoje + "T12:00").toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" })}</p>
+          <p className="text-sm mt-1 capitalize" style={{ color: "var(--text-muted)" }}>
+            {isHoje ? "Hoje — " : ""}{dataBR}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href={`/agenda?data=${prevDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">←</Link>
-          <Link href={`/agenda?data=${new Date().toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">Hoje</Link>
+          <Link href="/agenda" className="btn btn-secondary btn-sm">Hoje</Link>
           <Link href={`/agenda?data=${nextDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">→</Link>
-          <Link href={`/ordens-de-servico/nova?data=${hoje}`} className="btn btn-primary btn-sm">+ Nova OS</Link>
+          <Link href={`/ordens-de-servico/nova`} className="btn btn-primary btn-sm">+ Nova OS</Link>
         </div>
       </div>
 
-      <div className="card p-0">
-        <div className="grid border-b" style={{ gridTemplateColumns: `120px repeat(${vagasDia}, 1fr)`, borderColor: "var(--border)" }}>
-          <div className="p-3 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Vaga</div>
-          {vagas.map(v => (
-            <div key={v} className="p-3 text-xs font-semibold text-center uppercase" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--border)" }}>Vaga {v}</div>
-          ))}
-        </div>
-        {ordens && ordens.length === 0 ? (
-          <div className="p-10 text-center" style={{ color: "var(--text-muted)" }}>
-            <p className="text-4xl mb-3">📅</p>
-            <p>Nenhum agendamento para este dia</p>
-            <Link href={`/ordens-de-servico/nova?data=${hoje}`} className="btn btn-primary mt-4 inline-flex">+ Nova OS</Link>
-          </div>
-        ) : (
-          <div className="grid" style={{ gridTemplateColumns: `120px repeat(${vagasDia}, 1fr)` }}>
-            {ordens?.map((o: any, i) => {
-              const col = (o.vaga ?? 1);
-              return (
-                <Link key={o.id} href={`/ordens-de-servico/${o.id}`}
-                  className="p-3 m-1 rounded-lg block"
-                  style={{ gridColumn: col + 1, background: `${STATUS_COLOR[o.status]}15`, border: `1px solid ${STATUS_COLOR[o.status]}44` }}>
-                  <p className="text-xs font-bold" style={{ color: STATUS_COLOR[o.status] }}>{o.hora_entrada ?? "--:--"}</p>
-                  <p className="text-sm font-semibold mt-0.5" style={{ color: "var(--text)" }}>{o.veiculos?.placa}</p>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>{o.clientes?.nome}</p>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+      {/* KPI do dia */}
+      <div className="grid grid-cols-3 gap-4">
+        {["aguardando","em_atendimento","finalizado"].map(s => {
+          const count = ordens?.filter(o => o.status === s).length ?? 0;
+          return (
+            <div key={s} className="card text-center" style={{ borderLeft: `3px solid ${STATUS_COLOR[s]}` }}>
+              <p className="text-2xl font-bold" style={{ color: STATUS_COLOR[s] }}>{count}</p>
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{STATUS_LABEL[s]}</p>
+            </div>
+          );
+        })}
       </div>
-    </div>
-  );
-}
+
+      {/* Lista de OS do dia */}
+      {!ordens?.length ? (
+        <div className="card p-10 text-center" style={{ color: "var(--text-muted)" }}>
+          <p className="text-3xl mb-3">📅</p>
+          <p>Nenhum agendamento para este dia</p>
+          <Link href="/ordens-de-servico/nova" className="btn btn-primary mt-4 inline-flex">+ Nova OS</Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {ordens.map((o: any) => {
+            const servicos = Array.isArray(o.os_servicos) ? o.os_servicos.map((s: any) => s.nome).join(", ") : "";
+            const veiculo = o.veiculos;
+            const cor = STATUS_COLOR[o.status] ?? "#888";
+            return (
+              <Link key={o.id} href={`/ordens-de-servico/${o.id}`}
+                className="card flex items-center gap-4 hover:opacity-90 transition-opacity"
+                style={{ borderLeft: `4px solid ${cor}`, padding: "14px 18px" }}>
+                {/* Hora */}
+                <div className="text-center flex-shrink-0" style={{ minWidth: 52 }}>
+                  <p className="text-base font-bold" style={{ color: cor }}>{o.hora_entrada ?? "--:--

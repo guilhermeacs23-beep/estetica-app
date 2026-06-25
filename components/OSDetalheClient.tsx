@@ -63,7 +63,7 @@ export default function OSDetalheClient({ os, profile, funcionarios }: any) {
           </div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>OS #{os.numero}</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {new Date(os.data_entrada + "T00:00").toLocaleDateString("pt-BR")} · {os.hora_entrada ?? ""} · Vaga {os.vaga ?? "-"}
+            {new Date(os.data_entrada + "T00:00").toLocaleDateString("pt-BR")} · {os.hora_entrada ?? ""}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -178,3 +178,4 @@ export default function OSDetalheClient({ os, profile, funcionarios }: any) {
     </div>
   );
 }
+                         

@@ -12,10 +12,9 @@ const CHECKLIST_ITENS = [
 interface Props {
   tenantId: string; userId: string;
   clientes: any[]; servicos: any[]; formas: any[]; funcionarios: any[];
-  vagasDia: number;
 }
 
-export default function NovaOSForm({ tenantId, userId, clientes, servicos, formas, funcionarios, vagasDia }: Props) {
+export default function NovaOSForm({ tenantId, userId, clientes, servicos, formas, funcionarios }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -42,7 +41,6 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
   const [itensOS, setItensOS] = useState<Array<{ servicoId: string; nome: string; preco: number; funcionarioId: string }>>([]);
   const [dataEntrada, setDataEntrada] = useState(new Date().toISOString().split("T")[0]);
   const [horaEntrada, setHoraEntrada] = useState("08:00");
-  const [vaga, setVaga] = useState(1);
   const [obs, setObs] = useState("");
 
   // Step 4: pagamento
@@ -80,7 +78,7 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
         veiculoId: novoVeiculo ? null : veiculoId,
         novoVeiculo: novoVeiculo ? { placa: placa.toUpperCase(), modelo, marca, cor, ano: ano ? parseInt(ano) : null } : null,
         checklist: { ...checklist, observacoes: obsChecklist },
-        itens: itensOS, dataEntrada, horaEntrada, vaga, observacoes: obs,
+        itens: itensOS, dataEntrada, horaEntrada, observacoes: obs,
         formaPagamentoId, desconto: descontoNum, valorTotal: totalServicos, valorFinal,
       }),
     });
@@ -154,14 +152,9 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-4 mt-2">
+          <div className="grid grid-cols-2 gap-4 mt-2">
             <div className="field"><label className="label">Data *</label><input className="input" type="date" value={dataEntrada} onChange={e => setDataEntrada(e.target.value)} /></div>
-            <div className="field"><label className="label">Horário</label><input className="input" type="time" value={horaEntrada} onChange={e => setHoraEntrada(e.target.value)} /></div>
-            <div className="field"><label className="label">Vaga</label>
-              <select className="input" value={vaga} onChange={e => setVaga(parseInt(e.target.value))}>
-                {Array.from({ length: vagasDia }, (_, i) => i + 1).map(v => <option key={v} value={v}>Vaga {v}</option>)}
-              </select>
-            </div>
+            <div className="field"><label className="label">Horario de entrada</label><input className="input" type="time" value={horaEntrada} onChange={e => setHoraEntrada(e.target.value)} /></div>
           </div>
 
           <button className="btn btn-primary self-end" onClick={() => setStep(2)}>Próximo →</button>
@@ -178,7 +171,7 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
               <label key={item} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5">
                 <input type="checkbox" checked={checklist[item] ?? false}
                   onChange={e => setChecklist(p => ({ ...p, [item]: e.target.checked }))}
-                  className="w-4 h-4 accent-red-700" />
+                  className="w-4 h-4 accent-orange-500" />
                 <span className="text-sm" style={{ color: checklist[item] ? "var(--danger)" : "var(--text-muted)" }}>{item}</span>
               </label>
             ))}
@@ -203,7 +196,7 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
               const sel = itensOS.find(i => i.servicoId === s.id);
               return (
                 <button key={s.id} onClick={() => sel ? setItensOS(p => p.filter(i => i.servicoId !== s.id)) : adicionarServico(s)}
-                  className={`card text-left transition-colors ${sel ? "border-red-700" : ""}`}
+                  className={`card text-left transition-colors ${sel ? "border-orange-500" : ""}`}
                   style={{ borderColor: sel ? "var(--primary)" : undefined }}>
                   <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{s.nome}</p>
                   <p className="text-xs mt-1" style={{ color: "var(--primary)" }}>R$ {s.preco_base.toFixed(2).replace(".", ",")}</p>
@@ -276,3 +269,4 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
     </div>
   );
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                       
