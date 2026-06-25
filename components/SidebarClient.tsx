@@ -48,7 +48,7 @@ export default function SidebarClient({ profile }: { profile: any }) {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>R</div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src="/logo.png" alt="Studio RPM" style={{ width: 150, objectFit: "contain", mixBlendMode: "screen" }} />
+          <img src="/logo.png" alt="Studio RPM" style={{ width: 150, objectFit: "contain" }} />
         )}
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto btn btn-icon btn-ghost flex-shrink-0" style={{ fontSize: 12 }}>
           {collapsed ? "▶" : "◀"}
