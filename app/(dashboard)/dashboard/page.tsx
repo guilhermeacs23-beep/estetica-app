@@ -5,128 +5,104 @@ import Link from "next/link";
 async function getKPIs(tenantId: string) {
   const hoje = new Date().toISOString().split("T")[0];
   const mesInicio = hoje.slice(0, 7) + "-01";
-
   const [{ count: osHoje }, { count: osMes }, { data: faturamento }] = await Promise.all([
-    supabaseAdmin.from("ordens_servico")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId).eq("data_entrada", hoje),
-    supabaseAdmin.from("ordens_servico")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId).gte("data_entrada", mesInicio),
-    supabaseAdmin.from("ordens_servico")
-      .select("valor_final")
-      .eq("tenant_id", tenantId).gte("data_entrada", mesInicio)
-      .in("status", ["finalizado", "entregue"]),
+    supabaseAdmin.from("ordens_servico").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("data_entrada", hoje),
+    supabaseAdmin.from("ordens_servico").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("data_entrada", mesInicio),
+    supabaseAdmin.from("ordens_servico").select("valor_final").eq("tenant_id", tenantId).gte("data_entrada", mesInicio).in("status", ["finalizado", "entregue"]),
   ]);
-
   const faturamentoMes = faturamento?.reduce((a, b) => a + (b.valor_final ?? 0), 0) ?? 0;
   const ticketMedio = faturamento?.length ? faturamentoMes / faturamento.length : 0;
-
   return { osHoje: osHoje ?? 0, osMes: osMes ?? 0, faturamentoMes, ticketMedio };
 }
 
-async function getOSRecentes(tenantId: string) {
-  const { data } = await supabaseAdmin.from("ordens_servico")
-    .select("id, numero, status, data_entrada, clientes(nome), veiculos(placa, modelo)")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(5);
-  return data ?? [];
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  aguardando: "Aguardando", aceito: "Aceito", em_atendimento: "Em Atendimento",
-  finalizado: "Finalizado", entregue: "Entregue", recusado: "Recusado",
-};
+const MODULOS = [
+  {
+    href: "/ordens-de-servico", label: "ORDENS DE\nSERVIÇO", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+  },
+  {
+    href: "/clientes", label: "CLIENTES", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  },
+  {
+    href: "/veiculos", label: "VEÍCULOS", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  },
+  {
+    href: "/agenda", label: "AGENDA", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  },
+  {
+    href: "/dashboard-financeiro", label: "FINANCEIRO", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  },
+  {
+    href: "/servicos", label: "SERVIÇOS", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 1 21 12a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 4.93 4.93"/></svg>,
+  },
+  {
+    href: "/funcionarios", label: "FUNCIONÁRIOS", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  },
+  {
+    href: "/relatorios", label: "RELATÓRIOS", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  },
+  {
+    href: "/painel-tv", label: "PAINEL TV", color: "#C41E3A", newTab: true,
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  },
+  {
+    href: "/configuracoes", label: "CONFIGURAÇÕES", color: "#C41E3A",
+    icon: <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  },
+];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
-  const tenantId = profile?.tenant_id;
-
-  const [kpis, recentes] = await Promise.all([
-    getKPIs(tenantId),
-    getOSRecentes(tenantId),
-  ]);
-
+  const kpis = await getKPIs(profile?.tenant_id);
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-  const ATALHOS = [
-    { href: "/ordens-de-servico/nova", label: "Nova OS", icon: "🔧", desc: "Abrir ordem de serviço" },
-    { href: "/clientes/novo",          label: "Novo Cliente", icon: "👤", desc: "Cadastrar cliente" },
-    { href: "/agenda",                 label: "Agenda",   icon: "📅", desc: "Ver agendamentos" },
-    { href: "/painel-tv",              label: "Painel TV", icon: "📺", desc: "Tela de atendimento" },
-  ];
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Dashboard</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+        <h1 className="text-xl font-bold" style={{ color: "var(--text)" }}>Página Inicial</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
           {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "OS Hoje",          value: kpis.osHoje,           fmt: String },
-          { label: "OS no Mês",        value: kpis.osMes,            fmt: String },
-          { label: "Faturamento/Mês",  value: kpis.faturamentoMes,   fmt },
-          { label: "Ticket Médio",     value: kpis.ticketMedio,      fmt },
+          { label: "OS Hoje",         value: String(kpis.osHoje) },
+          { label: "OS no Mês",       value: String(kpis.osMes) },
+          { label: "Faturamento/Mês", value: fmt(kpis.faturamentoMes) },
+          { label: "Ticket Médio",    value: fmt(kpis.ticketMedio) },
         ].map(k => (
           <div key={k.label} className="kpi-card">
             <span className="kpi-label">{k.label}</span>
-            <span className="kpi-value">{k.fmt(k.value as any)}</span>
+            <span className="kpi-value">{k.value}</span>
           </div>
         ))}
       </div>
 
-      {/* Atalhos */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {ATALHOS.map(a => (
-          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 text-center hover:border-red-700 transition-colors cursor-pointer">
-            <span className="text-3xl">{a.icon}</span>
-            <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{a.label}</span>
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{a.desc}</span>
+      {/* Grid de módulos */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+        {MODULOS.map(m => (
+          <Link
+            key={m.href}
+            href={m.href}
+            target={m.newTab ? "_blank" : undefined}
+            className="modulo-card"
+          >
+            <div className="modulo-icon">{m.icon}</div>
+            <span className="modulo-label">{m.label}</span>
           </Link>
         ))}
-      </div>
-
-      {/* OS Recentes */}
-      <div className="card p-0">
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-          <h2 className="font-semibold" style={{ color: "var(--text)" }}>Ordens Recentes</h2>
-          <Link href="/ordens-de-servico" className="text-sm" style={{ color: "var(--primary)" }}>Ver todas →</Link>
-        </div>
-        {recentes.length === 0 ? (
-          <div className="p-8 text-center" style={{ color: "var(--text-muted)" }}>
-            <p className="text-4xl mb-3">🔧</p>
-            <p className="font-medium">Nenhuma OS ainda</p>
-            <p className="text-sm mt-1">Crie a primeira ordem de serviço</p>
-            <Link href="/ordens-de-servico/nova" className="btn btn-primary mt-4 inline-flex">Nova OS</Link>
-          </div>
-        ) : (
-          <div className="table-wrapper border-0 rounded-none">
-            <table>
-              <thead><tr>
-                <th>Nº</th><th>Cliente</th><th>Veículo</th><th>Data</th><th>Status</th>
-              </tr></thead>
-              <tbody>
-                {recentes.map((os: any) => (
-                  <tr key={os.id}>
-                    <td><Link href={`/ordens-de-servico/${os.id}`} style={{ color: "var(--primary)" }}>#{os.numero}</Link></td>
-                    <td style={{ color: "var(--text)" }}>{os.clientes?.nome ?? "-"}</td>
-                    <td style={{ color: "var(--text-muted)" }}>{os.veiculos?.placa} · {os.veiculos?.modelo}</td>
-                    <td style={{ color: "var(--text-muted)" }}>{new Date(os.data_entrada + "T00:00").toLocaleDateString("pt-BR")}</td>
-                    <td><span className={`badge badge-${os.status.replace("_", "-")}`}>{STATUS_LABEL[os.status]}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   );

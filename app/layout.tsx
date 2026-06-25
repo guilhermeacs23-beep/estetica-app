@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import PWARegister from "@/components/PWARegister";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -9,10 +10,7 @@ export const metadata: Metadata = {
   title: "Studio RPM",
   description: "Sistema de Gestão para Estética Automotiva",
   manifest: "/manifest.json",
-  icons: {
-    icon: "/favicon.svg",
-    apple: "/icons/icon-192.png",
-  },
+  icons: { icon: "/favicon.svg", apple: "/icons/icon-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Studio RPM" },
 };
 
@@ -25,14 +23,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={inter.variable} data-theme="dark">
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body>
-        <PWARegister />
-        {children}
+        <ThemeProvider>
+          <PWARegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
