@@ -1,3 +1,4 @@
+"use server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import Link from "next/link";
@@ -37,6 +38,33 @@ export default async function ClientesPage() {
           </thead>
           <tbody>
             {!clientes?.length ? (
-              <tr><td colSpan={7} className="text-center py-12" style={{ color: "var(--text-muted)" }}>Nenhum cliente ainda. <Link href="/importar" style={{ color: "var(--primary)" }}>Importar via XLSX</Link></td></tr>
+              <tr><td colSpan={7} className="text-center py-12" style={{ color: "var(--text-muted)" }}>
+                Nenhum cliente ainda.{" "}
+                <Link href="/importar" style={{ color: "var(--primary)" }}>Importar via XLSX</Link>
+              </td></tr>
             ) : clientes.map(c => {
-              const v = Array.isArray(c.veiculos) ? c.ve
+              const v = Array.isArray(c.veiculos) ? c.veiculos[0] : c.veiculos;
+              const veiculo = v ? `${v.modelo ?? ""}${v.ano ? ` ${v.ano}` : ""}${v.cor ? ` (${v.cor})` : ""}` : null;
+              const endereco = [c.endereco, c.cidade, c.estado].filter(Boolean).join(", ") || null;
+              return (
+                <tr key={c.id}>
+                  <td className="font-medium" style={{ color: "var(--text)" }}>{c.nome}</td>
+                  <td style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.telefone ?? c.whatsapp ?? "-"}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{c.email ?? "-"}</td>
+                  <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{endereco ?? "-"}</td>
+                  <td style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                    {veiculo ? (
+                      <span>{veiculo}<br /><span style={{ color: "var(--primary)", fontWeight: 600, letterSpacing: 1 }}>{v!.placa}</span></span>
+                    ) : "-"}
+                  </td>
+                  <td style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
+                  <td><Link href={`/clientes/${c.id}`} className="btn btn-sm btn-ghost">Ver</Link></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

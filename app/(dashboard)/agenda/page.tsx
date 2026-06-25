@@ -40,30 +40,29 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/agenda?data=${prevDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">←</Link>
+          <Link href={`/agenda?data=${prevDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">Anterior</Link>
           <Link href="/agenda" className="btn btn-secondary btn-sm">Hoje</Link>
-          <Link href={`/agenda?data=${nextDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">→</Link>
-          <Link href={`/ordens-de-servico/nova`} className="btn btn-primary btn-sm">+ Nova OS</Link>
+          <Link href={`/agenda?data=${nextDay.toISOString().split("T")[0]}`} className="btn btn-secondary btn-sm">Proximo</Link>
+          <Link href="/ordens-de-servico/nova" className="btn btn-primary btn-sm">+ Nova OS</Link>
         </div>
       </div>
 
-      {/* KPI do dia */}
       <div className="grid grid-cols-3 gap-4">
-        {["aguardando","em_atendimento","finalizado"].map(s => {
+        {(["aguardando","em_atendimento","finalizado"] as const).map(s => {
           const count = ordens?.filter(o => o.status === s).length ?? 0;
+          const cor = STATUS_COLOR[s];
           return (
-            <div key={s} className="card text-center" style={{ borderLeft: `3px solid ${STATUS_COLOR[s]}` }}>
-              <p className="text-2xl font-bold" style={{ color: STATUS_COLOR[s] }}>{count}</p>
+            <div key={s} className="card text-center" style={{ borderLeft: `3px solid ${cor}` }}>
+              <p className="text-2xl font-bold" style={{ color: cor }}>{count}</p>
               <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{STATUS_LABEL[s]}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Lista de OS do dia */}
       {!ordens?.length ? (
         <div className="card p-10 text-center" style={{ color: "var(--text-muted)" }}>
-          <p className="text-3xl mb-3">📅</p>
+          <p className="text-3xl mb-3">Agenda</p>
           <p>Nenhum agendamento para este dia</p>
           <Link href="/ordens-de-servico/nova" className="btn btn-primary mt-4 inline-flex">+ Nova OS</Link>
         </div>
@@ -77,6 +76,30 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
               <Link key={o.id} href={`/ordens-de-servico/${o.id}`}
                 className="card flex items-center gap-4 hover:opacity-90 transition-opacity"
                 style={{ borderLeft: `4px solid ${cor}`, padding: "14px 18px" }}>
-                {/* Hora */}
                 <div className="text-center flex-shrink-0" style={{ minWidth: 52 }}>
-                  <p className="text-base font-bold" style={{ color: cor }}>{o.hora_entrada ?? "--:--
+                  <p className="text-base font-bold" style={{ color: cor }}>{o.hora_entrada ?? "00:00"}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>OS #{o.numero}</p>
+                </div>
+                <div style={{ width: 1, height: 40, background: "var(--border)", flexShrink: 0 }} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>
+                    {veiculo?.placa ?? "sem placa"}
+                    {veiculo?.modelo ? <span style={{ color: "var(--text-muted)", fontWeight: 400 }}> {veiculo.modelo}{veiculo.cor ? ` ${veiculo.cor}` : ""}</span> : null}
+                  </p>
+                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{o.clientes?.nome}</p>
+                </div>
+                <div className="hidden sm:block flex-1 min-w-0">
+                  <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{servicos || "sem servicos"}</p>
+                </div>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0"
+                  style={{ background: cor + "20", color: cor }}>
+                  {STATUS_LABEL[o.status]}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
