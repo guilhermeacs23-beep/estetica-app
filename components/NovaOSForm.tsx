@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const CHECKLIST_ITENS = [
-  "Riscos na lataria", "Amassados", "Pára-choque dianteiro", "Pára-choque traseiro",
+  "Riscos na lataria", "Amassados", "Para-choque dianteiro", "Para-choque traseiro",
   "Retrovisores", "Vidros", "Rodas/calotas", "Interior", "Documentos no carro",
-  "Tapetes", "Estepe", "Macaco/triângulo",
+  "Tapetes", "Estepe", "Macaco/triangulo",
 ];
 
 interface Props {
@@ -19,7 +19,6 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
 
-  // Step 1: cliente/veiculo
   const [clienteId, setClienteId] = useState("");
   const [novoCliente, setNovoCliente] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
@@ -33,25 +32,18 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
   const [cor, setCor] = useState("");
   const [ano, setAno] = useState("");
 
-  // Step 2: checklist
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [obsChecklist, setObsChecklist] = useState("");
 
-  // Step 3: serviços
   const [itensOS, setItensOS] = useState<Array<{ servicoId: string; nome: string; preco: number; funcionarioId: string }>>([]);
   const [dataEntrada, setDataEntrada] = useState(new Date().toISOString().split("T")[0]);
   const [horaEntrada, setHoraEntrada] = useState("08:00");
   const [obs, setObs] = useState("");
 
-  // Step 4: pagamento
   const [formaPagamentoId, setFormaPagamentoId] = useState("");
   const [desconto, setDesconto] = useState("");
 
-  const supabase = createClient();
-
   async function buscarVeiculos(cId: string) {
-    const { data } = await supabase.schema?.("rpm").from("veiculos").select("id, placa, modelo, cor").eq("cliente_id", cId) ?? { data: [] };
-    // Use API instead
     const res = await fetch(`/api/veiculos?clienteId=${cId}`);
     const json = await res.json();
     setVeiculos(json.data ?? []);
@@ -89,21 +81,20 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Step indicator */}
       <div className="flex items-center gap-2">
-        {["Cliente/Veículo", "Checklist", "Serviços", "Pagamento"].map((s, i) => (
+        {["Cliente/Veiculo", "Checklist", "Servicos", "Pagamento"].map((s, i) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step > i + 1 ? "text-white" : step === i + 1 ? "text-white" : ""}`}
-              style={{ background: step > i + 1 ? "var(--success)" : step === i + 1 ? "var(--primary)" : "var(--border)", color: step <= i + 1 ? "var(--text-muted)" : undefined }}>
-              {step > i + 1 ? "✓" : i + 1}
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{ background: step > i + 1 ? "var(--success)" : step === i + 1 ? "var(--primary)" : "var(--border)",
+                       color: step <= i + 1 ? (step === i + 1 ? "white" : "var(--text-muted)") : "white" }}>
+              {step > i + 1 ? "v" : i + 1}
             </div>
-            <span className={`text-sm hidden sm:block ${step === i + 1 ? "font-semibold" : ""}`} style={{ color: step === i + 1 ? "var(--text)" : "var(--text-muted)" }}>{s}</span>
+            <span className="text-sm hidden sm:block" style={{ color: step === i + 1 ? "var(--text)" : "var(--text-muted)", fontWeight: step === i + 1 ? 600 : 400 }}>{s}</span>
             {i < 3 && <div className="w-6 h-px" style={{ background: "var(--border)" }} />}
           </div>
         ))}
       </div>
 
-      {/* Step 1: Cliente e Veículo */}
       {step === 1 && (
         <div className="card flex flex-col gap-5">
           <h2 className="font-semibold" style={{ color: "var(--text)" }}>Cliente</h2>
@@ -126,12 +117,12 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
             </div>
           )}
 
-          <div className="divider" />
-          <h2 className="font-semibold" style={{ color: "var(--text)" }}>Veículo</h2>
+          <hr style={{ border: "none", borderTop: "1px solid var(--border)" }} />
+          <h2 className="font-semibold" style={{ color: "var(--text)" }}>Veiculo</h2>
           {clienteId && veiculos.length > 0 && (
             <div className="flex gap-2 mb-2">
               <button onClick={() => setNovoVeiculo(false)} className={`btn btn-sm ${!novoVeiculo ? "btn-primary" : "btn-secondary"}`}>Existente</button>
-              <button onClick={() => setNovoVeiculo(true)} className={`btn btn-sm ${novoVeiculo ? "btn-primary" : "btn-secondary"}`}>Novo Veículo</button>
+              <button onClick={() => setNovoVeiculo(true)} className={`btn btn-sm ${novoVeiculo ? "btn-primary" : "btn-secondary"}`}>Novo Veiculo</button>
             </div>
           )}
           {(!clienteId || novoVeiculo || novoCliente || veiculos.length === 0) ? (
@@ -144,10 +135,10 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
             </div>
           ) : (
             <div className="field">
-              <label className="label">Selecionar veículo</label>
+              <label className="label">Selecionar veiculo</label>
               <select className="input" value={veiculoId} onChange={e => setVeiculoId(e.target.value)}>
                 <option value="">-- Selecione --</option>
-                {veiculos.map(v => <option key={v.id} value={v.id}>{v.placa} · {v.modelo} · {v.cor}</option>)}
+                {veiculos.map(v => <option key={v.id} value={v.id}>{v.placa} - {v.modelo} - {v.cor}</option>)}
               </select>
             </div>
           )}
@@ -157,56 +148,57 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
             <div className="field"><label className="label">Horario de entrada</label><input className="input" type="time" value={horaEntrada} onChange={e => setHoraEntrada(e.target.value)} /></div>
           </div>
 
-          <button className="btn btn-primary self-end" onClick={() => setStep(2)}>Próximo →</button>
+          <button className="btn btn-primary self-end" onClick={() => setStep(2)}>Proximo</button>
         </div>
       )}
 
-      {/* Step 2: Checklist */}
       {step === 2 && (
         <div className="card flex flex-col gap-4">
           <h2 className="font-semibold" style={{ color: "var(--text)" }}>Checklist de Entrada</h2>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Marque os itens com avarias ou problemas observados na entrada</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Marque os itens com avarias ou problemas na entrada</p>
           <div className="grid grid-cols-2 gap-2">
             {CHECKLIST_ITENS.map(item => (
-              <label key={item} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5">
+              <label key={item} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg" style={{ background: checklist[item] ? "var(--danger-bg, #fee)" : undefined }}>
                 <input type="checkbox" checked={checklist[item] ?? false}
-                  onChange={e => setChecklist(p => ({ ...p, [item]: e.target.checked }))}
-                  className="w-4 h-4 accent-orange-500" />
+                  onChange={e => setChecklist(p => ({ ...p, [item]: e.target.checked }))} />
                 <span className="text-sm" style={{ color: checklist[item] ? "var(--danger)" : "var(--text-muted)" }}>{item}</span>
               </label>
             ))}
           </div>
           <div className="field">
-            <label className="label">Observações gerais</label>
-            <textarea className="input min-h-20 resize-none" value={obsChecklist} onChange={e => setObsChecklist(e.target.value)} placeholder="Descreva o estado geral do veículo..." />
+            <label className="label">Observacoes gerais</label>
+            <textarea className="input min-h-20 resize-none" value={obsChecklist} onChange={e => setObsChecklist(e.target.value)} placeholder="Estado geral do veiculo..." />
           </div>
           <div className="flex gap-3 justify-between">
-            <button className="btn btn-secondary" onClick={() => setStep(1)}>← Voltar</button>
-            <button className="btn btn-primary" onClick={() => setStep(3)}>Próximo →</button>
+            <button className="btn btn-secondary" onClick={() => setStep(1)}>Voltar</button>
+            <button className="btn btn-primary" onClick={() => setStep(3)}>Proximo</button>
           </div>
         </div>
       )}
 
-      {/* Step 3: Serviços */}
       {step === 3 && (
         <div className="card flex flex-col gap-4">
-          <h2 className="font-semibold" style={{ color: "var(--text)" }}>Serviços</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {servicos.map(s => {
-              const sel = itensOS.find(i => i.servicoId === s.id);
-              return (
-                <button key={s.id} onClick={() => sel ? setItensOS(p => p.filter(i => i.servicoId !== s.id)) : adicionarServico(s)}
-                  className={`card text-left transition-colors ${sel ? "border-orange-500" : ""}`}
-                  style={{ borderColor: sel ? "var(--primary)" : undefined }}>
-                  <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{s.nome}</p>
-                  <p className="text-xs mt-1" style={{ color: "var(--primary)" }}>R$ {s.preco_base.toFixed(2).replace(".", ",")}</p>
-                </button>
-              );
-            })}
-          </div>
+          <h2 className="font-semibold" style={{ color: "var(--text)" }}>Servicos</h2>
+          {servicos.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Nenhum servico cadastrado. Acesse /servicos para cadastrar.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {servicos.map(s => {
+                const sel = itensOS.find(i => i.servicoId === s.id);
+                return (
+                  <button key={s.id} onClick={() => sel ? setItensOS(p => p.filter(i => i.servicoId !== s.id)) : adicionarServico(s)}
+                    className="card text-left transition-colors"
+                    style={{ borderColor: sel ? "var(--primary)" : undefined, borderWidth: sel ? 2 : 1 }}>
+                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{s.nome}</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--primary)" }}>R$ {s.preco_base.toFixed(2).replace(".", ",")}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {itensOS.length > 0 && (
             <div className="flex flex-col gap-2 mt-2">
-              <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Serviços selecionados</h3>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Servicos selecionados</h3>
               {itensOS.map((item, idx) => (
                 <div key={item.servicoId} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--bg)" }}>
                   <span className="flex-1 text-sm" style={{ color: "var(--text)" }}>{item.nome}</span>
@@ -214,31 +206,28 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
                     onChange={e => setItensOS(p => p.map((i, j) => j === idx ? { ...i, preco: parseFloat(e.target.value) || 0 } : i))} />
                   <select className="input w-36 text-sm" value={item.funcionarioId}
                     onChange={e => setItensOS(p => p.map((i, j) => j === idx ? { ...i, funcionarioId: e.target.value } : i))}>
-                    <option value="">Técnico</option>
+                    <option value="">Tecnico</option>
                     {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
                   </select>
-                  <button onClick={() => setItensOS(p => p.filter((_, j) => j !== idx))} className="btn btn-icon btn-ghost" style={{ color: "var(--danger)" }}>✕</button>
+                  <button onClick={() => setItensOS(p => p.filter((_, j) => j !== idx))} className="btn btn-icon btn-ghost" style={{ color: "var(--danger)" }}>X</button>
                 </div>
               ))}
               <div className="flex justify-end pt-2">
-                <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                  Total: R$ {totalServicos.toFixed(2).replace(".", ",")}
-                </span>
+                <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>Total: R$ {totalServicos.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
           )}
           <div className="field">
-            <label className="label">Observações da OS</label>
-            <textarea className="input min-h-16 resize-none" value={obs} onChange={e => setObs(e.target.value)} placeholder="Observações adicionais..." />
+            <label className="label">Observacoes da OS</label>
+            <textarea className="input min-h-16 resize-none" value={obs} onChange={e => setObs(e.target.value)} placeholder="Observacoes adicionais..." />
           </div>
           <div className="flex gap-3 justify-between">
-            <button className="btn btn-secondary" onClick={() => setStep(2)}>← Voltar</button>
-            <button className="btn btn-primary" onClick={() => setStep(4)} disabled={itensOS.length === 0}>Próximo →</button>
+            <button className="btn btn-secondary" onClick={() => setStep(2)}>Voltar</button>
+            <button className="btn btn-primary" onClick={() => setStep(4)} disabled={itensOS.length === 0}>Proximo</button>
           </div>
         </div>
       )}
 
-      {/* Step 4: Pagamento */}
       {step === 4 && (
         <div className="card flex flex-col gap-4">
           <h2 className="font-semibold" style={{ color: "var(--text)" }}>Pagamento</h2>
@@ -259,9 +248,9 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
             <div className="flex justify-between font-bold"><span style={{ color: "var(--text)" }}>Total</span><span style={{ color: "var(--primary)" }}>R$ {valorFinal.toFixed(2).replace(".", ",")}</span></div>
           </div>
           <div className="flex gap-3 justify-between">
-            <button className="btn btn-secondary" onClick={() => setStep(3)}>← Voltar</button>
+            <button className="btn btn-secondary" onClick={() => setStep(3)}>Voltar</button>
             <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-              {loading ? "Abrindo OS..." : "Abrir OS ✓"}
+              {loading ? "Abrindo OS..." : "Abrir OS"}
             </button>
           </div>
         </div>
