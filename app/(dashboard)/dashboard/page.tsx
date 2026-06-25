@@ -62,6 +62,9 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id, nome").eq("id", user!.id).single();
   const kpis = await getKPIs(profile?.tenant_id);
+  const { count: recapCount } = await supabaseAdmin
+    .from("vw_clientes_recap").select("*", { count: "exact", head: true })
+    .eq("tenant_id", profile?.tenant_id ?? "");
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
@@ -87,6 +90,21 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Alerta de recap */}
+      {(recapCount ?? 0) > 0 && (
+        <a href="/clientes/recap" className="flex items-center gap-3 p-3 rounded-xl border"
+          style={{ background:"rgba(196,30,58,0.08)", borderColor:"rgba(196,30,58,0.3)", textDecoration:"none" }}>
+          <span className="text-xl">📞</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color:"var(--primary)" }}>
+              {recapCount} {recapCount === 1 ? "cliente" : "clientes"} com retorno vencido
+            </p>
+            <p className="text-xs" style={{ color:"var(--text-muted)" }}>Clique para ver e acionar agora</p>
+          </div>
+          <span style={{ color:"var(--primary)" }}>→</span>
+        </a>
+      )}
 
       {/* Módulos ativos — cards vermelhos */}
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">

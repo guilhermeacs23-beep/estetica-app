@@ -17,7 +17,7 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
   const [form, setForm] = useState({
     nome: "", categoria: "", duracao_min: "60",
     custo_outros: "0", markup: "100",
-    preco_base: "", descricao: "",
+    preco_base: "", descricao: "", tempo_retorno_dias: "",
   });
   const [ficha, setFicha] = useState<{ produto_id: string; quantidade: string }[]>([]);
 
@@ -33,7 +33,7 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
   const precoSugerido = calcPrecoSugerido(custoProdutos, parseFloat(form.custo_outros) || 0, parseFloat(form.markup) || 0);
 
   function resetForm() {
-    setForm({ nome:"",categoria:"",duracao_min:"60",custo_outros:"0",markup:"100",preco_base:"",descricao:"" });
+    setForm({ nome:"",categoria:"",duracao_min:"60",custo_outros:"0",markup:"100",preco_base:"",descricao:"",tempo_retorno_dias:"" });
     setFicha([]);
     setEditId(null);
   }
@@ -56,6 +56,7 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
       preco_sugerido: precoSugerido,
       preco_base: parseFloat(form.preco_base) || precoSugerido,
       tempo_estimado: parseInt(form.duracao_min) || 60,
+      tempo_retorno_dias: form.tempo_retorno_dias ? parseInt(form.tempo_retorno_dias) : null,
       descricao: form.descricao,
       ficha_tecnica: ficha.filter(l => l.produto_id && parseFloat(l.quantidade) > 0),
     };
@@ -79,6 +80,7 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
       markup: String(s.markup ?? 100),
       preco_base: String(s.preco_base),
       descricao: s.descricao ?? "",
+      tempo_retorno_dias: String(s.tempo_retorno_dias ?? ""),
     });
     setEditId(s.id);
     setShowForm(true);
@@ -112,6 +114,15 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
             </div>
             <div className="field"><label className="label">Duração estimada (min)</label>
               <input className="input" type="number" value={form.duracao_min} onChange={e => set("duracao_min", e.target.value)} /></div>
+            <div className="field col-span-2">
+              <label className="label">⏱️ Tempo de Retorno (dias)</label>
+              <input className="input" type="number" min="1" value={form.tempo_retorno_dias}
+                onChange={e => set("tempo_retorno_dias", e.target.value)}
+                placeholder="Ex: 30 (lavagem mensal), 90 (polimento trimestral), 180 (vitrificação)" />
+              <span className="text-xs mt-1" style={{ color:"var(--text-subtle)" }}>
+                Usado para alertar quando o cliente deve retornar. Deixe em branco para serviços sem periodicidade.
+              </span>
+            </div>
           </div>
 
           {/* Ficha técnica de produtos */}
@@ -217,6 +228,7 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
                   <td style={{ color:"var(--text-muted)" }}>{s.markup ?? 100}%</td>
                   <td style={{ color:"var(--text-muted)" }}>{fmtR(s.preco_sugerido ?? 0)}</td>
                   <td className="font-semibold" style={{ color:"var(--primary)" }}>{fmtR(s.preco_base)}</td>
+                  <td style={{ color:"var(--text-muted)" }}>{s.tempo_retorno_dias ? `${s.tempo_retorno_dias}d` : "-"}</td>
                   <td><span className={`badge ${s.ativo ? "badge-finalizado" : "badge-recusado"}`}>{s.ativo ? "Ativo" : "Inativo"}</span></td>
                   <td>
                     <button onClick={() => openEdit(s)} className="btn btn-sm btn-ghost">Editar</button>
