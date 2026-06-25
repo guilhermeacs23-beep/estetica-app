@@ -56,7 +56,7 @@ export default function PainelTVClient({ ordens, nomeTenant }: { ordens: any[]; 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: "#C41E3A" }}>R</div>
+          <img src="/logo.png" alt="Studio RPM" style={{ height: 44, width: "auto", objectFit: "contain" }} />
           <div>
             <p className="text-xs font-medium" style={{ color: "#666" }}>PAINEL DE ATENDIMENTO</p>
             <p className="text-lg font-bold" style={{ color: "#fff" }}>{nomeTenant}</p>
