@@ -36,6 +36,7 @@ function IconLock()      { return <svg width="16" height="16" viewBox="0 0 24 24
 
 const MODULOS_ATIVOS = [
   { href: "/ordens-de-servico", label: "ORDENS DE\nSERVIÇO", icon: <IconWrench /> },
+  { href: "/orcamentos",          label: "ORÇAMENTOS",         icon: <IconReceipt /> },
   { href: "/clientes",          label: "CLIENTES",           icon: <IconUsers /> },
   { href: "/veiculos",          label: "VEÍCULOS",           icon: <IconCar /> },
   { href: "/agenda",            label: "AGENDA",             icon: <IconCalendar /> },
