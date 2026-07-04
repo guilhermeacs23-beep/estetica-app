@@ -5,10 +5,31 @@ const STATUS_LABEL: Record<string,string> = { pendente:"Pendente", aprovado:"Apr
 const STATUS_BADGE: Record<string,string> = { pendente:"badge-aguardando", aprovado:"badge-finalizado", recusado:"badge-recusado", expirado:"badge-em-atendimento" };
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
 
-interface Cliente { id: string; nome: string; telefone?: string; }
+interface Cliente { id: string; nome: string; telefone?: string; whatsapp?: string; }
 interface Servico { id: string; nome: string; preco_base: number; }
-interface Orcamento { id: string; numero?: number; status: string; valor_total: number; validade: string; os_id?: string; clientes?: { nome: string }; veiculos?: { placa: string; modelo: string }; nome_avulso?: string; placa_avulsa?: string; }
+interface Orcamento {
+  id: string; numero?: number; status: string; valor_total: number; validade: string; os_id?: string;
+  clientes?: { nome: string; whatsapp?: string; telefone?: string };
+  nome_avulso?: string; placa_avulsa?: string; modelo_avulso?: string;
+}
 interface Item { servico_id: string; servico_nome: string; preco: string; quantidade: string; }
+
+const ORIGIN = typeof window !== "undefined" ? window.location.origin : "https://estetica-app-theta.vercel.app";
+
+function buildWaMsg(o: Orcamento) {
+  const nome = (o.clientes?.nome ?? o.nome_avulso ?? "Cliente").split(" ")[0];
+  const placa = o.placa_avulsa ?? "";
+  const link = `${ORIGIN}/orcamento/${o.id}`;
+  return encodeURIComponent(
+    `Olá ${nome}! 👋
+Seu orçamento #${o.numero ?? ""} está pronto.
+${placa ? `Veículo: ${placa}
+` : ""}Total: ${fmt(o.valor_total)}
+
+Veja os detalhes aqui:
+${link}`
+  );
+}
 
 export default function OrcamentosList({
   orcamentos: inicial, clientes, servicos,
@@ -17,7 +38,6 @@ export default function OrcamentosList({
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Campos do form
   const [nomeAvulso, setNomeAvulso] = useState("");
   const [placa, setPlaca] = useState("");
   const [modelo, setModelo] = useState("");
@@ -48,203 +68,198 @@ export default function OrcamentosList({
     }));
   }
 
-  function resetForm() {
-    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo("");
-    setClienteId(""); setObservacoes(""); setDesconto("0"); setItens([]);
-    setBuscarCliente(false);
-  }
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!itens.length) { alert("Adicione pelo menos um servico."); return; }
+  async function salvar() {
+    if (itens.length === 0) { alert("Adicione ao menos um serviço"); return; }
     setLoading(true);
     const res = await fetch("/api/orcamentos", {
-      method:"POST", headers:{"Content-Type":"application/json"},
+      method: "POST", headers: { "Content-Type":"application/json" },
       body: JSON.stringify({
-        cliente_id: clienteId || null,
-        nome_avulso: nomeAvulso.trim() || null,
-        placa_avulsa: placa.toUpperCase().replace(/[^A-Z0-9]/g,"") || null,
-        modelo_avulso: modelo || null,
+        clienteId: buscarCliente ? clienteId || null : null,
+        nomeAvulso: !buscarCliente ? nomeAvulso : null,
+        placaAvulsa: placa, modeloAvulso: modelo,
         validade, observacoes,
         desconto: parseFloat(desconto)||0,
-        valor_total: total,
-        itens: itens.map(i => ({
-          servico_id: i.servico_id, servico_nome: i.servico_nome,
-          preco: parseFloat(i.preco)||0, quantidade: parseInt(i.quantidade)||1,
-        })),
+        valorTotal: total,
+        itens: itens.map(i => ({ servico_id: i.servico_id, servico_nome: i.servico_nome, preco: parseFloat(i.preco)||0, quantidade: parseInt(i.quantidade)||1 })),
       }),
     });
-    const json = await res.json();
-    if (json.id) { setLista(p => [json, ...p]); resetForm(); }
-    else alert(json.error ?? "Erro ao salvar");
+    const data = await res.json();
+    if (data.error) { alert(data.error); setLoading(false); return; }
+    setLista(prev => [data, ...prev]);
+    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo(""); setItens([]); setDesconto("0"); setObservacoes(""); setClienteId("");
     setLoading(false);
   }
 
-  async function updateStatus(id: string, status: string) {
-    const res = await fetch(`/api/orcamentos/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status }) });
-    const json = await res.json();
-    setLista(p => p.map(o => o.id === id ? { ...o, status: json.status } : o));
+  async function excluir(id: string) {
+    if (!confirm("Cancelar este orçamento?")) return;
+    await fetch("/api/orcamentos", { method:"DELETE", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id }) });
+    setLista(prev => prev.filter(o => o.id !== id));
   }
 
-  async function converterOS(id: string) {
-    const res = await fetch(`/api/orcamentos/${id}/converter`, { method:"POST" });
-    const json = await res.json();
-    if (json.os_id) {
-      setLista(p => p.map(o => o.id === id ? { ...o, status:"aprovado", os_id: json.os_id } : o));
-      window.location.href = `/ordens-de-servico/${json.os_id}`;
+  function abrirWhatsApp(o: Orcamento) {
+    const tel = (o.clientes?.whatsapp || o.clientes?.telefone || "").replace(/\D/g,"");
+    if (!tel) {
+      const msg = buildWaMsg(o);
+      window.open(`https://wa.me/?text=${msg}`, "_blank");
+      return;
     }
+    window.open(`https://wa.me/55${tel}?text=${buildWaMsg(o)}`, "_blank");
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color:"var(--text)" }}>Orcamentos</h1>
-          <p className="text-sm mt-0.5" style={{ color:"var(--text-muted)" }}>Gere orcamentos e converta em OS com 1 clique</p>
+          <h1 className="text-2xl font-bold" style={{ color:"var(--text)" }}>Orçamentos</h1>
+          <p className="text-sm mt-1" style={{ color:"var(--text-muted)" }}>Gere orçamentos e converta em OS com 1 clique</p>
         </div>
-        {!showForm && <button onClick={() => setShowForm(true)} className="btn btn-primary">+ Novo Orcamento</button>}
+        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancelar" : "+ Novo Orçamento"}
+        </button>
       </div>
 
+      {/* Formulário */}
       {showForm && (
-        <div className="card">
-          <h2 className="font-semibold text-lg mb-4" style={{ color:"var(--text)" }}>Novo Orcamento</h2>
-          <form onSubmit={save} className="flex flex-col gap-4">
+        <div className="card flex flex-col gap-4">
+          <h2 className="font-semibold text-base" style={{ color:"var(--text)" }}>Novo Orçamento</h2>
 
-            {/* Nome + Placa — campos livres, sem obrigatorio */}
-            <div className="grid gap-4" style={{ gridTemplateColumns:"1fr 1fr 1fr" }}>
-              <div className="field" style={{ gridColumn:"span 1" }}>
-                <label className="label">Nome do cliente <span style={{ color:"var(--text-muted)", fontWeight:400 }}>(opcional)</span></label>
-                <input className="input" value={nomeAvulso} onChange={e => setNomeAvulso(e.target.value)}
-                  placeholder="Joao, Maria, Cliente..." />
-              </div>
-              <div className="field">
-                <label className="label">Placa <span style={{ color:"var(--text-muted)", fontWeight:400 }}>(opcional)</span></label>
-                <input className="input" value={placa} onChange={e => setPlaca(e.target.value.toUpperCase())}
-                  placeholder="ABC1D23" maxLength={8} style={{ textTransform:"uppercase", letterSpacing:2, fontWeight:600 }} />
-              </div>
-              <div className="field">
-                <label className="label">Modelo <span style={{ color:"var(--text-muted)", fontWeight:400 }}>(opcional)</span></label>
-                <input className="input" value={modelo} onChange={e => setModelo(e.target.value)} placeholder="Civic, Gol..." />
-              </div>
-            </div>
-
-            {/* Vincular a cliente cadastrado (opcional) */}
-            <div>
-              <button type="button" onClick={() => setBuscarCliente(b => !b)}
-                className="text-xs" style={{ color:"var(--primary)", textDecoration:"underline", cursor:"pointer" }}>
-                {buscarCliente ? "Ocultar busca de cadastro" : "Vincular a cliente ja cadastrado (opcional)"}
-              </button>
-              {buscarCliente && (
-                <div className="field mt-2">
-                  <select className="input" value={clienteId} onChange={e => {
-                    setClienteId(e.target.value);
-                    const c = clientes.find(x => x.id === e.target.value);
-                    if (c) setNomeAvulso(c.nome);
-                  }}>
-                    <option value="">-- Selecionar cliente --</option>
-                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}{c.telefone ? ` — ${c.telefone}` : ""}</option>)}
-                  </select>
-                  {clientes.length === 0 && <p className="text-xs mt-1" style={{ color:"var(--text-muted)" }}>Nenhum cliente cadastrado ainda.</p>}
-                </div>
-              )}
-            </div>
-
-            {/* Validade + Desconto */}
-            <div className="grid gap-4" style={{ gridTemplateColumns:"1fr 1fr" }}>
-              <div className="field">
-                <label className="label">Validade</label>
-                <input className="input" type="date" value={validade} onChange={e => setValidade(e.target.value)} required />
-              </div>
-              <div className="field">
-                <label className="label">Desconto (R$)</label>
-                <input className="input" type="number" step="0.01" min="0" value={desconto} onChange={e => setDesconto(e.target.value)} placeholder="0,00" />
-              </div>
-            </div>
-
-            {/* Servicos */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="label mb-0">Servicos *</label>
-                <button type="button" onClick={addItem} className="btn btn-sm btn-secondary" disabled={servicos.length===0}>+ Adicionar servico</button>
-              </div>
-              {servicos.length === 0 && (
-                <p className="text-xs py-2" style={{ color:"var(--danger)" }}>Nenhum servico cadastrado. Va em Servicos e cadastre os servicos oferecidos.</p>
-              )}
-              {!itens.length && servicos.length > 0 && <p className="text-xs py-2" style={{ color:"var(--text-muted)" }}>Nenhum servico adicionado.</p>}
-              {itens.map((item, i) => (
-                <div key={i} className="grid gap-2 mb-2 items-center" style={{ gridTemplateColumns:"1fr 140px 80px 36px" }}>
-                  <select className="input" value={item.servico_id} onChange={e => setItem(i,"servico_id",e.target.value)}>
-                    {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                  </select>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs" style={{ color:"var(--text-muted)" }}>R$</span>
-                    <input className="input text-right pl-8" type="number" step="0.01" value={item.preco}
-                      onChange={e => setItem(i,"preco",e.target.value)} />
-                  </div>
-                  <input className="input text-center" type="number" min="1" value={item.quantidade}
-                    onChange={e => setItem(i,"quantidade",e.target.value)} placeholder="Qtd" />
-                  <button type="button" onClick={() => setItens(p => p.filter((_,idx)=>idx!==i))}
-                    className="btn btn-icon btn-ghost btn-sm" style={{ color:"var(--danger)" }}>x</button>
-                </div>
-              ))}
-              {itens.length > 0 && (
-                <div className="flex flex-col gap-1 mt-3 text-sm text-right">
-                  <span style={{ color:"var(--text-muted)" }}>Subtotal: {fmt(subtotal)}</span>
-                  {parseFloat(desconto)>0 && <span style={{ color:"var(--warning)" }}>Desconto: -{fmt(parseFloat(desconto)||0)}</span>}
-                  <span className="font-bold text-base" style={{ color:"var(--primary)" }}>Total: {fmt(total)}</span>
-                </div>
-              )}
-            </div>
-
+          {/* Cliente */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="field">
-              <label className="label">Observacoes</label>
-              <textarea className="input" rows={2} value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Condicoes, prazo, garantia..." />
+              <label className="label">Nome do cliente (opcional)</label>
+              {!buscarCliente ? (
+                <input className="input" value={nomeAvulso} onChange={e => setNomeAvulso(e.target.value)} placeholder="Joao, Maria, Cliente..." />
+              ) : (
+                <select className="input" value={clienteId} onChange={e => setClienteId(e.target.value)}>
+                  <option value="">Selecionar...</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              )}
+              <button className="text-xs mt-1" style={{ color:"var(--primary)", background:"none", border:"none", cursor:"pointer", textDecoration:"underline" }}
+                onClick={() => { setBuscarCliente(!buscarCliente); setClienteId(""); setNomeAvulso(""); }}>
+                {buscarCliente ? "Digitar nome livre" : "Vincular a cliente cadastrado (opcional)"}
+              </button>
             </div>
+            <div className="field">
+              <label className="label">Placa (opcional)</label>
+              <input className="input" value={placa} onChange={e => setPlaca(e.target.value.toUpperCase())} placeholder="ABC1D23" />
+            </div>
+            <div className="field">
+              <label className="label">Modelo (opcional)</label>
+              <input className="input" value={modelo} onChange={e => setModelo(e.target.value)} placeholder="Civic, Gol..." />
+            </div>
+          </div>
 
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={resetForm} className="btn btn-secondary">Cancelar</button>
-              <button type="submit" className="btn btn-primary" disabled={loading}>{loading?"Salvando...":"Salvar Orcamento"}</button>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="field">
+              <label className="label">Validade</label>
+              <input className="input" type="date" value={validade} onChange={e => setValidade(e.target.value)} />
             </div>
-          </form>
+            <div className="field">
+              <label className="label">Desconto (R$)</label>
+              <input className="input" type="number" min="0" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Itens */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label mb-0">Serviços *</label>
+              <button className="btn btn-ghost btn-sm" onClick={addItem} disabled={servicos.length === 0}>+ Adicionar serviço</button>
+            </div>
+            {servicos.length === 0 && (
+              <p className="text-sm" style={{ color:"var(--danger)" }}>Nenhum serviço cadastrado. Vá em Serviços e cadastre os serviços oferecidos.</p>
+            )}
+            {itens.map((it, i) => (
+              <div key={i} className="grid gap-3 mb-2" style={{ gridTemplateColumns:"1fr 80px 120px 32px" }}>
+                <select className="input" value={it.servico_id} onChange={e => setItem(i,"servico_id",e.target.value)}>
+                  {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                </select>
+                <input className="input" type="number" min="1" value={it.quantidade} onChange={e => setItem(i,"quantidade",e.target.value)} placeholder="Qtd" />
+                <input className="input" type="number" step="0.01" value={it.preco} onChange={e => setItem(i,"preco",e.target.value)} placeholder="Valor" />
+                <button className="btn btn-ghost btn-sm" style={{ color:"var(--danger)" }} onClick={() => setItens(p => p.filter((_,idx)=>idx!==i))}>✕</button>
+              </div>
+            ))}
+            {itens.length > 0 && (
+              <div className="flex justify-end gap-4 mt-2 text-sm" style={{ color:"var(--text-muted)" }}>
+                <span>Subtotal: {fmt(subtotal)}</span>
+                {parseFloat(desconto)>0 && <span style={{ color:"var(--danger)" }}>− {fmt(parseFloat(desconto))}</span>}
+                <span className="font-bold" style={{ color:"var(--text)" }}>Total: {fmt(total)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="field">
+            <label className="label">Observações</label>
+            <textarea className="input" rows={2} value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Condições, prazo, garantia..." />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button className="btn btn-primary" disabled={loading} onClick={salvar}>{loading ? "Salvando..." : "Salvar Orçamento"}</button>
+          </div>
         </div>
       )}
 
       {/* Tabela */}
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>No</th><th>Cliente / Nome</th><th>Placa / Modelo</th><th>Valor</th><th>Validade</th><th>Status</th><th>Acoes</th></tr>
-          </thead>
-          <tbody>
-            {!lista.length ? (
-              <tr><td colSpan={7} className="text-center py-10" style={{ color:"var(--text-muted)" }}>Nenhum orcamento ainda.</td></tr>
-            ) : lista.map((o) => {
-              const nomeExibido = o.clientes?.nome ?? o.nome_avulso ?? "-";
-              const veiculoExibido = o.veiculos ? `${o.veiculos.placa} ${o.veiculos.modelo}` : (o.placa_avulsa ?? "-");
-              return (
-              <tr key={o.id}>
-                <td className="font-mono text-sm" style={{ color:"var(--text-muted)" }}>#{o.numero}</td>
-                <td className="font-medium" style={{ color:"var(--text)" }}>{nomeExibido}</td>
-                <td style={{ color:"var(--text-muted)" }}>{veiculoExibido}</td>
-                <td className="font-semibold" style={{ color:"var(--primary)" }}>{fmt(o.valor_total)}</td>
-                <td style={{ color: new Date(o.validade) < new Date() && o.status==="pendente" ? "var(--danger)" : "var(--text-muted)" }}>
-                  {new Date(o.validade+"T12:00").toLocaleDateString("pt-BR")}
-                </td>
-                <td><span className={`badge ${STATUS_BADGE[o.status]??""}`}>{STATUS_LABEL[o.status]??o.status}</span></td>
-                <td>
-                  <div className="flex gap-1">
-                    {o.status === "pendente" && <>
-                      <button onClick={() => converterOS(o.id)} className="btn btn-sm btn-primary" title="Converter em OS">OS</button>
-                      <button onClick={() => updateStatus(o.id,"recusado")} className="btn btn-sm btn-ghost" style={{ color:"var(--danger)" }}>x</button>
-                    </>}
-                    {o.status === "aprovado" && o.os_id && <a href={`/ordens-de-servico/${o.os_id}`} className="btn btn-sm btn-ghost">Ver OS</a>}
-                  </div>
-                </td>
+      <div className="card p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ borderBottom:"1px solid var(--border)", background:"var(--bg-muted)" }}>
+                {["Nº","Cliente / Nome","Placa / Modelo","Valor","Validade","Status","Ações"].map(h => (
+                  <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontSize:11, fontWeight:600, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", whiteSpace:"nowrap" }}>{h}</th>
+                ))}
               </tr>
-              );
-            })}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {lista.length === 0 ? (
+                <tr><td colSpan={7} style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Nenhum orçamento ainda.</td></tr>
+              ) : lista.map(o => {
+                const nome = o.clientes?.nome ?? o.nome_avulso ?? "—";
+                const veiculo = [o.placa_avulsa, o.modelo_avulso].filter(Boolean).join(" · ") || "—";
+                return (
+                  <tr key={o.id} style={{ borderBottom:"1px solid var(--border)" }}>
+                    <td style={{ padding:"12px 14px", fontWeight:600, color:"var(--text-muted)" }}>#{o.numero}</td>
+                    <td style={{ padding:"12px 14px", fontWeight:500, color:"var(--text)" }}>{nome}</td>
+                    <td style={{ padding:"12px 14px", color:"var(--text-muted)", fontSize:13 }}>{veiculo}</td>
+                    <td style={{ padding:"12px 14px", fontWeight:600, color:"var(--primary)" }}>{fmt(o.valor_total)}</td>
+                    <td style={{ padding:"12px 14px", fontSize:13, color:"var(--text-muted)", whiteSpace:"nowrap" }}>
+                      {o.validade ? new Date(o.validade+"T12:00").toLocaleDateString("pt-BR") : "—"}
+                    </td>
+                    <td style={{ padding:"12px 14px" }}>
+                      <span className={`badge ${STATUS_BADGE[o.status] ?? ""}`}>{STATUS_LABEL[o.status] ?? o.status}</span>
+                    </td>
+                    <td style={{ padding:"12px 14px" }}>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        {/* Preview */}
+                        <a href={`/orcamento/${o.id}`} target="_blank"
+                          className="btn btn-sm btn-secondary"
+                          title="Ver orçamento / PDF"
+                          style={{ textDecoration:"none" }}>
+                          👁️ Ver
+                        </a>
+                        {/* WhatsApp */}
+                        <button className="btn btn-sm" onClick={() => abrirWhatsApp(o)}
+                          style={{ background:"#25d366", color:"#fff", border:"none" }}
+                          title="Enviar pelo WhatsApp">
+                          💬
+                        </button>
+                        {/* Converter em OS */}
+                        {!o.os_id && (
+                          <span className="btn btn-sm btn-primary" style={{ cursor:"default" }} title="Converter em OS">OS</span>
+                        )}
+                        {/* Excluir */}
+                        <button className="btn btn-ghost btn-sm" style={{ color:"var(--danger)" }}
+                          onClick={() => excluir(o.id)} title="Cancelar">✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
