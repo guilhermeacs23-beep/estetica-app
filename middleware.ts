@@ -23,11 +23,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const publicPaths = ["/login", "/cadastro"];
-  const isPublic = publicPaths.some((p) => path.startsWith(p)) || path.startsWith("/orcamento/");
+  const authPaths = ["/login", "/cadastro"];
+  const openPaths = ["/orcamento/"]; // acessivel sem login E com login
+  const isOpen = openPaths.some((p) => path.startsWith(p));
+  const isAuth = authPaths.some((p) => path.startsWith(p));
 
-  if (!user && !isPublic) return NextResponse.redirect(new URL("/login", request.url));
-  if (user && isPublic) return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (!user && !isAuth && !isOpen) return NextResponse.redirect(new URL("/login", request.url));
+  if (user && isAuth) return NextResponse.redirect(new URL("/dashboard", request.url));
 
   return supabaseResponse;
 }
