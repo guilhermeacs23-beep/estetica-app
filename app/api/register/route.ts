@@ -9,7 +9,8 @@ function slugify(text: string) {
 export async function POST(req: NextRequest) {
   try {
     const { nomeEstetica, nomeResponsavel, email, senha, telefone } = await req.json();
-    if (!nomeEstetica || !email || !senha || !nomeResponsavel)
+    const nomeEstética = nomeEstetica || nomeResponsavel || email.split("@")[0];
+    if (!email || !senha || !nomeResponsavel)
       return NextResponse.json({ error: "Campos obrigatórios faltando." }, { status: 400 });
 
     // 1. Criar usuário no Auth
@@ -21,9 +22,9 @@ export async function POST(req: NextRequest) {
     const userId = authData.user.id;
 
     // 2. Criar tenant
-    const slug = slugify(nomeEstetica) + "-" + Math.random().toString(36).slice(2, 6);
+    const slug = slugify(nomeEstética) + "-" + Math.random().toString(36).slice(2, 6);
     const { data: tenant, error: tenantErr } = await supabaseAdmin
-      .from("tenants").insert({ nome: nomeEstetica, slug }).select().single();
+      .from("tenants").insert({ nome: nomeEstética, slug }).select().single();
     if (tenantErr) { await supabaseAdmin.auth.admin.deleteUser(userId); return NextResponse.json({ error: tenantErr.message }, { status: 500 }); }
 
     // 3. Criar profile
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Criar configuração padrão
     await supabaseAdmin.from("configuracoes").insert({
-      tenant_id: tenant.id, nome_fantasia: nomeEstetica,
+      tenant_id: tenant.id, nome_fantasia: nomeEstética,
       vagas_dia: 5, horario_abertura: "08:00", horario_fechamento: "18:00",
     });
 
