@@ -15,6 +15,65 @@ interface Orcamento {
 }
 interface Item { servico_id: string; servico_nome: string; preco: string; quantidade: string; }
 
+interface Servico { id: string; nome: string; preco_base: number; }
+
+function ServicoAutocomplete({ servicos, item, onChange }: {
+  servicos: Servico[];
+  item: Item;
+  onChange: (k: string, v: string) => void;
+}) {
+  const [query, setQuery] = useState(item.servico_nome || "");
+  const [open, setOpen] = useState(false);
+
+  const filtered = query.length >= 1
+    ? servicos.filter(s => s.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : servicos.slice(0, 8);
+
+  function pick(s: Servico) {
+    setQuery(s.nome);
+    setOpen(false);
+    onChange("servico_id", s.id);
+    onChange("servico_nome", s.nome);
+    onChange("preco", String(s.preco_base));
+  }
+
+  return (
+    <div style={{ position: "relative", flex: 1 }}>
+      <input
+        className="input"
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); onChange("servico_nome", e.target.value); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Digite para buscar serviço..."
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
+          background: "var(--bg-sidebar)", border: "1px solid var(--border)",
+          borderRadius: 8, marginTop: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+          maxHeight: 220, overflowY: "auto",
+        }}>
+          {filtered.map(s => (
+            <button key={s.id} type="button" onMouseDown={() => pick(s)} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              width: "100%", padding: "9px 12px", background: "none", border: "none",
+              cursor: "pointer", textAlign: "left", borderBottom: "1px solid var(--border)",
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = "var(--bg-card)")}
+            onMouseOut={e => (e.currentTarget.style.background = "none")}>
+              <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{s.nome}</span>
+              <span style={{ fontSize: 12, color: "var(--primary)", fontWeight: 600, marginLeft: 8, flexShrink: 0 }}>
+                R$ {s.preco_base.toFixed(2).replace(".", ",")}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const ORIGIN = typeof window !== "undefined" ? window.location.origin : "https://estetica-app-theta.vercel.app";
 
 function buildWaMsg(o: Orcamento) {
@@ -54,18 +113,14 @@ export default function OrcamentosList({
   const total = Math.max(0, subtotal - (parseFloat(desconto)||0));
 
   function addItem() {
-    const s = servicos[0]; if (!s) return;
-    setItens(p => [...p, { servico_id: s.id, servico_nome: s.nome, preco: String(s.preco_base), quantidade: "1" }]);
+    setItens(p => [...p, { servico_id: "", servico_nome: "", preco: "", quantidade: "1" }]);
   }
 
   function setItem(i: number, k: string, v: string) {
     setItens(p => p.map((x,idx) => {
       if (idx !== i) return x;
       const upd = { ...x, [k]: v };
-      if (k === "servico_id") {
-        const s = servicos.find(s => s.id === v);
-        if (s) { upd.servico_nome = s.nome; upd.preco = String(s.preco_base); }
-      }
+      // servico_nome and preco are set directly by ServicoAutocomplete
       return upd;
     }));
   }
@@ -202,12 +257,14 @@ export default function OrcamentosList({
               <p className="text-sm" style={{ color:"var(--danger)" }}>Nenhum serviço cadastrado. Vá em Serviços e cadastre os serviços oferecidos.</p>
             )}
             {itens.map((it, i) => (
-              <div key={i} className="grid gap-3 mb-2" style={{ gridTemplateColumns:"1fr 80px 120px 32px" }}>
-                <select className="input" value={it.servico_id} onChange={e => setItem(i,"servico_id",e.target.value)}>
-                  {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                </select>
-                <input className="input" type="number" min="1" value={it.quantidade} onChange={e => setItem(i,"quantidade",e.target.value)} placeholder="Qtd" />
-                <input className="input" type="number" step="0.01" value={it.preco} onChange={e => setItem(i,"preco",e.target.value)} placeholder="Valor" />
+              <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
+                <ServicoAutocomplete
+                  servicos={servicos}
+                  item={it}
+                  onChange={(k, v) => setItem(i, k, v)}
+                />
+                <input className="input" type="number" min="1" value={it.quantidade} onChange={e => setItem(i,"quantidade",e.target.value)} placeholder="Qtd" style={{ width:64, flexShrink:0 }} />
+                <input className="input" type="number" step="0.01" value={it.preco} onChange={e => setItem(i,"preco",e.target.value)} placeholder="Valor" style={{ width:100, flexShrink:0 }} />
                 <button className="btn btn-ghost btn-sm" style={{ color:"var(--danger)" }} onClick={() => setItens(p => p.filter((_,idx)=>idx!==i))}>✕</button>
               </div>
             ))}
