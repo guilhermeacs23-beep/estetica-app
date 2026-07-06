@@ -84,26 +84,16 @@ function buildWaMsg(o: Orcamento) {
   const itens = o.orcamento_servicos ?? [];
   const listaServicos = itens.map(i => {
     const preco = fmt(Number(i.preco) * (i.quantidade ?? 1));
-    const desc = i.descricao ? `\n   ${i.descricao}` : "";
+    const desc = i.descricao ? `\n_${i.descricao}_` : "";
     const qtd = (i.quantidade ?? 1) > 1 ? ` (x${i.quantidade})` : "";
-    return `• *${i.servico_nome}*${qtd} — ${preco}${desc}`;
-  }).join("\n");
+    return `*${i.servico_nome}*${qtd} - ${preco}${desc}`;
+  }).join("\n\n");
 
-  return encodeURIComponent(
-    `Olá *${nome}*! 👋
+  const veiculo = placa ? `\nVeiculo: *${placa}*` : "";
+  const servicos = listaServicos ? `\n\nServicos:\n${listaServicos}` : "";
 
-Seu orçamento *#${o.numero ?? ""}* está pronto.${placa ? `\n🚗 Veículo: *${placa}*` : ""}
-
-📋 *Serviços:*
-${listaServicos || "• (ver link)"}
-
-💰 *Total: ${fmt(o.valor_total)}*
-
-🔗 Veja o orçamento completo:
-${link}
-
-Qualquer dúvida é só chamar! ✨`
-  );
+  const msg = `Ola *${nome}*! Seu orcamento *#${o.numero ?? ""}* esta pronto.${veiculo}${servicos}\n\nTotal: *${fmt(o.valor_total)}*\n\nVeja aqui: ${link}\n\nQualquer duvida e so chamar!`;
+  return encodeURIComponent(msg);
 }
 
 export default function OrcamentosList({
