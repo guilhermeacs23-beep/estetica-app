@@ -16,12 +16,11 @@ function fmtBRL(v: any) {
 
 function buildWaMsg(s: any) {
   const preco = fmtBRL(s.preco_base);
-  const duracao = s.duracao_min ? `⏱ Duração: ${s.duracao_min} min\n` : "";
-  const retorno = s.tempo_retorno_dias ? `🔄 Recomendado a cada: ${s.tempo_retorno_dias} dias\n` : "";
-  const desc = s.descricao ? `\n${s.descricao}\n` : "";
-  const insta = s.link_instagram ? `\n📸 Veja no Instagram:\n${s.link_instagram}\n` : "";
+  const desc = s.descricao ? `\n${s.descricao}` : "";
+  const duracao = s.duracao_min ? `\n⏱ Duração: ${s.duracao_min} min` : "";
+  const insta = s.link_instagram ? `\n\n📸 Confira no Instagram:\n${s.link_instagram}` : "";
   return (
-    `🚗 *${s.nome}*${desc}\n💰 Valor: ${preco}\n${duracao}${retorno}${insta}\nAgende seu horário conosco! ✨`
+    `✨ *${s.nome}*${desc}\n\n💰 Valor: ${preco}${duracao}${insta}\n\nAgende seu horário conosco! 🚗`
   ).trim();
 }
 
