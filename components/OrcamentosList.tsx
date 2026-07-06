@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import ClienteAutocomplete from "@/components/ClienteAutocomplete";
 
 const STATUS_LABEL: Record<string,string> = { pendente:"Pendente", aprovado:"Aprovado", recusado:"Recusado", expirado:"Expirado" };
 const STATUS_BADGE: Record<string,string> = { pendente:"badge-aguardando", aprovado:"badge-finalizado", recusado:"badge-recusado", expirado:"badge-em-atendimento" };
@@ -41,12 +42,11 @@ export default function OrcamentosList({
   const [nomeAvulso, setNomeAvulso] = useState("");
   const [placa, setPlaca] = useState("");
   const [modelo, setModelo] = useState("");
-  const [clienteId, setClienteId] = useState("");
+  const [clienteSelecionado, setClienteSelecionado] = useState<{ id: string; nome: string; telefone?: string; whatsapp?: string } | null>(null);
   const [validade, setValidade] = useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10));
   const [observacoes, setObservacoes] = useState("");
   const [desconto, setDesconto] = useState("0");
   const [itens, setItens] = useState<Item[]>([]);
-  const [buscarCliente, setBuscarCliente] = useState(false);
 
   const subtotal = itens.reduce((s,i) => s + (parseFloat(i.preco)||0) * (parseInt(i.quantidade)||1), 0);
   const total = Math.max(0, subtotal - (parseFloat(desconto)||0));
@@ -74,8 +74,8 @@ export default function OrcamentosList({
     const res = await fetch("/api/orcamentos", {
       method: "POST", headers: { "Content-Type":"application/json" },
       body: JSON.stringify({
-        clienteId: buscarCliente ? clienteId || null : null,
-        nomeAvulso: !buscarCliente ? nomeAvulso : null,
+        clienteId: clienteSelecionado ? clienteSelecionado.id : null,
+        nomeAvulso: !clienteSelecionado ? nomeAvulso : null,
         placaAvulsa: placa, modeloAvulso: modelo,
         validade, observacoes,
         desconto: parseFloat(desconto)||0,
@@ -86,7 +86,7 @@ export default function OrcamentosList({
     const data = await res.json();
     if (data.error) { alert(data.error); setLoading(false); return; }
     setLista(prev => [data, ...prev]);
-    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo(""); setItens([]); setDesconto("0"); setObservacoes(""); setClienteId("");
+    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo(""); setItens([]); setDesconto("0"); setObservacoes(""); setClienteSelecionado(null);
     setLoading(false);
   }
 
@@ -126,19 +126,15 @@ export default function OrcamentosList({
           {/* Cliente */}
           <div className="grid grid-cols-3 gap-4">
             <div className="field">
-              <label className="label">Nome do cliente (opcional)</label>
-              {!buscarCliente ? (
-                <input className="input" value={nomeAvulso} onChange={e => setNomeAvulso(e.target.value)} placeholder="Joao, Maria, Cliente..." />
-              ) : (
-                <select className="input" value={clienteId} onChange={e => setClienteId(e.target.value)}>
-                  <option value="">Selecionar...</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
-              )}
-              <button className="text-xs mt-1" style={{ color:"var(--primary)", background:"none", border:"none", cursor:"pointer", textDecoration:"underline" }}
-                onClick={() => { setBuscarCliente(!buscarCliente); setClienteId(""); setNomeAvulso(""); }}>
-                {buscarCliente ? "Digitar nome livre" : "Vincular a cliente cadastrado (opcional)"}
-              </button>
+              <label className="label">Cliente (nome ou celular)</label>
+              <ClienteAutocomplete
+                selected={clienteSelecionado}
+                onSelect={c => {
+                  setClienteSelecionado(c);
+                  if (!c) setNomeAvulso("");
+                  else setNomeAvulso(c.nome);
+                }}
+              />
             </div>
             <div className="field">
               <label className="label">Placa (opcional)</label>
