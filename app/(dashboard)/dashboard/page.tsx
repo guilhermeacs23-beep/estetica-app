@@ -6,14 +6,26 @@ import DashboardCalendar from "@/components/DashboardCalendar";
 async function getKPIs(tenantId: string) {
   const hoje = new Date().toISOString().split("T")[0];
   const mesInicio = hoje.slice(0, 7) + "-01";
-  const [{ count: osHoje }, { count: osMes }, { data: fat }] = await Promise.all([
+  const [
+    { count: osHoje }, { count: osMes }, { data: fat },
+    { count: totalClientes }, { count: totalServicos },
+    { count: orcamentosMes }, { count: veiculosMes },
+  ] = await Promise.all([
     supabaseAdmin.from("ordens_servico").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("data_entrada", hoje),
     supabaseAdmin.from("ordens_servico").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("data_entrada", mesInicio),
     supabaseAdmin.from("ordens_servico").select("valor_final").eq("tenant_id", tenantId).gte("data_entrada", mesInicio).in("status", ["finalizado", "entregue"]),
+    supabaseAdmin.from("clientes").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+    supabaseAdmin.from("servicos").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("ativo", true),
+    supabaseAdmin.from("orcamentos").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", mesInicio + "T00:00:00"),
+    supabaseAdmin.from("veiculos").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
   ]);
   const faturamentoMes = fat?.reduce((a, b) => a + (b.valor_final ?? 0), 0) ?? 0;
   const ticketMedio = fat?.length ? faturamentoMes / fat.length : 0;
-  return { osHoje: osHoje ?? 0, osMes: osMes ?? 0, faturamentoMes, ticketMedio };
+  return {
+    osHoje: osHoje ?? 0, osMes: osMes ?? 0, faturamentoMes, ticketMedio,
+    totalClientes: totalClientes ?? 0, totalServicos: totalServicos ?? 0,
+    orcamentosMes: orcamentosMes ?? 0, veiculosMes: veiculosMes ?? 0,
+  };
 }
 
 function IconWrench()    { return <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> }
@@ -78,7 +90,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — linha 1: financeiro/OS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "OS Hoje",         value: String(kpis.osHoje) },
@@ -89,6 +101,24 @@ export default async function DashboardPage() {
           <div key={k.label} className="kpi-card">
             <span className="kpi-label">{k.label}</span>
             <span className="kpi-value">{k.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* KPIs — linha 2: base de dados */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Clientes cadastrados", value: String(kpis.totalClientes),  icon: "👤" },
+          { label: "Veículos cadastrados", value: String(kpis.veiculosMes),     icon: "🚗" },
+          { label: "Serviços ativos",      value: String(kpis.totalServicos),   icon: "⚙️" },
+          { label: "Orçamentos no mês",    value: String(kpis.orcamentosMes),   icon: "📄" },
+        ].map(k => (
+          <div key={k.label} className="kpi-card" style={{ flexDirection:"row", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:28, flexShrink:0 }}>{k.icon}</span>
+            <div>
+              <span className="kpi-value" style={{ fontSize:"1.5rem" }}>{k.value}</span>
+              <span className="kpi-label" style={{ display:"block" }}>{k.label}</span>
+            </div>
           </div>
         ))}
       </div>
