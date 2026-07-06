@@ -9,7 +9,7 @@ export default function CadastroPage() {
   const [erro, setErro] = useState("");
   const [showSenha, setShowSenha] = useState(false);
   const [form, setForm] = useState({
-    nomeEstetica: "", nomeResponsavel: "", email: "", senha: "", telefone: "",
+    nomeResponsavel: "", email: "", senha: "", telefone: "",
   });
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
@@ -34,11 +34,7 @@ export default function CadastroPage() {
       <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>Cadastre sua estética no Studio RPM</p>
 
       <form onSubmit={handleCadastro} className="flex flex-col gap-4">
-        <div className="field">
-          <label className="label">Nome da Estética *</label>
-          <input className="input" value={form.nomeEstetica} onChange={e => set("nomeEstetica", e.target.value)} placeholder="Ex: Detailing Premium" required />
-        </div>
-        <div className="field">
+<div className="field">
           <label className="label">Seu Nome *</label>
           <input className="input" value={form.nomeResponsavel} onChange={e => set("nomeResponsavel", e.target.value)} placeholder="Nome completo" required />
         </div>
