@@ -43,11 +43,13 @@ export default function SidebarClient({ profile }: { profile: Record<string, unk
       style={{ width: collapsed ? 60 : 240, minWidth: collapsed ? 60 : 240, background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
       <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
-        {!collapsed
-          ? <img src="/logo.png" alt="Studio RPM" style={{ height: 32, width: "auto", objectFit: "contain" }} />
-          : <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>R</div>
-        }
-        <button onClick={() => setCollapsed(!collapsed)} className="ml-auto" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>
+        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0" style={{ textDecoration: "none" }} title="Voltar ao Dashboard">
+          {!collapsed
+            ? <img src="/logo.png" alt="Studio RPM" style={{ height: 32, width: "auto", objectFit: "contain", maxWidth: 140 }} />
+            : <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>R</div>
+          }
+        </Link>
+        <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>
           {collapsed ? ">" : "<"}
         </button>
       </div>
