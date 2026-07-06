@@ -20,6 +20,7 @@ const NAV = [
   { href: "/clientes/recap",       label: "Recap de Clientes",  icon: "R" },
   { href: "/importar",             label: "Importar Clientes",  icon: "I" },
   { divider: true },
+  { href: "/usuarios",             label: "Usuarios",           icon: "U" },
   { href: "/relatorios",           label: "Relatorios",         icon: "R" },
   { href: "/configuracoes",        label: "Configuracoes",      icon: "C" },
 ];
