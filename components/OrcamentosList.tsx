@@ -141,8 +141,9 @@ export default function OrcamentosList({
                   setNomeAvulso(c.nome);
                   // busca veículos do cliente
                   const res = await fetch(`/api/veiculos?clienteId=${c.id}`);
-                  const veics = await res.json();
-                  if (Array.isArray(veics) && veics.length > 0) {
+                  const json = await res.json();
+                  const veics = Array.isArray(json) ? json : (json.data ?? []);
+                  if (veics.length > 0) {
                     setVeiculosCliente(veics);
                     // se tiver só 1, preenche automaticamente
                     if (veics.length === 1) {
