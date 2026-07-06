@@ -106,6 +106,14 @@ export default function ServicosList({ servicos: inicial }: { servicos: any[] })
           <div className="grid grid-cols-2 gap-4">
             <div className="field col-span-2"><label className="label">Nome do Serviço *</label>
               <input className="input" value={form.nome} onChange={e => set("nome", e.target.value)} required /></div>
+            <div className="field col-span-2">
+              <label className="label">💬 Descrição do Serviço</label>
+              <textarea className="input" rows={3} value={form.descricao} onChange={e => set("descricao", e.target.value)}
+                placeholder="Descreva o serviço para uso em catálogos, WhatsApp e orçamentos. Ex: Lavagem completa com shampoo neutro, secagem com microfibra e aspiração interna..." />
+              <span className="text-xs mt-1" style={{ color:"var(--text-subtle)" }}>
+                Aparece nos orçamentos enviados ao cliente e em comunicações automáticas.
+              </span>
+            </div>
             <div className="field"><label className="label">Categoria</label>
               <select className="input" value={form.categoria} onChange={e => set("categoria", e.target.value)}>
                 <option value="">Geral</option>
