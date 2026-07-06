@@ -43,6 +43,8 @@ export default function OrcamentosList({
   const [placa, setPlaca] = useState("");
   const [modelo, setModelo] = useState("");
   const [clienteSelecionado, setClienteSelecionado] = useState<{ id: string; nome: string; telefone?: string; whatsapp?: string } | null>(null);
+  const [veiculosCliente, setVeiculosCliente] = useState<{ id: string; placa: string; modelo: string; marca?: string }[]>([]);
+  const [veiculoId, setVeiculoId] = useState("");
   const [validade, setValidade] = useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10));
   const [observacoes, setObservacoes] = useState("");
   const [desconto, setDesconto] = useState("0");
@@ -86,7 +88,7 @@ export default function OrcamentosList({
     const data = await res.json();
     if (data.error) { alert(data.error); setLoading(false); return; }
     setLista(prev => [data, ...prev]);
-    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo(""); setItens([]); setDesconto("0"); setObservacoes(""); setClienteSelecionado(null);
+    setShowForm(false); setNomeAvulso(""); setPlaca(""); setModelo(""); setItens([]); setDesconto("0"); setObservacoes(""); setClienteSelecionado(null); setVeiculosCliente([]); setVeiculoId("");
     setLoading(false);
   }
 
@@ -129,20 +131,52 @@ export default function OrcamentosList({
               <label className="label">Cliente (nome ou celular)</label>
               <ClienteAutocomplete
                 selected={clienteSelecionado}
-                onSelect={c => {
+                onSelect={async c => {
                   setClienteSelecionado(c);
-                  if (!c) setNomeAvulso("");
-                  else setNomeAvulso(c.nome);
+                  setVeiculosCliente([]);
+                  setVeiculoId("");
+                  setPlaca("");
+                  setModelo("");
+                  if (!c) { setNomeAvulso(""); return; }
+                  setNomeAvulso(c.nome);
+                  // busca veículos do cliente
+                  const res = await fetch(`/api/veiculos?clienteId=${c.id}`);
+                  const veics = await res.json();
+                  if (Array.isArray(veics) && veics.length > 0) {
+                    setVeiculosCliente(veics);
+                    // se tiver só 1, preenche automaticamente
+                    if (veics.length === 1) {
+                      setPlaca(veics[0].placa ?? "");
+                      setModelo(veics[0].modelo ?? "");
+                      setVeiculoId(veics[0].id);
+                    }
+                  }
                 }}
               />
             </div>
             <div className="field">
               <label className="label">Placa (opcional)</label>
-              <input className="input" value={placa} onChange={e => setPlaca(e.target.value.toUpperCase())} placeholder="ABC1D23" />
+              {veiculosCliente.length > 1 ? (
+                <select className="input" value={veiculoId} onChange={e => {
+                  const v = veiculosCliente.find(x => x.id === e.target.value);
+                  setVeiculoId(e.target.value);
+                  setPlaca(v?.placa ?? "");
+                  setModelo(v?.modelo ?? "");
+                }}>
+                  <option value="">Selecionar veículo...</option>
+                  {veiculosCliente.map(v => (
+                    <option key={v.id} value={v.id}>{v.placa} · {v.modelo}</option>
+                  ))}
+                </select>
+              ) : (
+                <input className="input" value={placa} onChange={e => setPlaca(e.target.value.toUpperCase())} placeholder="ABC1D23" />
+              )}
             </div>
             <div className="field">
               <label className="label">Modelo (opcional)</label>
-              <input className="input" value={modelo} onChange={e => setModelo(e.target.value)} placeholder="Civic, Gol..." />
+              <input className="input" value={modelo} onChange={e => setModelo(e.target.value)} placeholder="Civic, Gol..."
+                readOnly={veiculosCliente.length > 0}
+                style={veiculosCliente.length > 0 ? { background: "var(--bg)", color: "var(--text-muted)" } : {}} />
             </div>
           </div>
 
