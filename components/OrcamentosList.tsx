@@ -7,13 +7,14 @@ const STATUS_BADGE: Record<string,string> = { pendente:"badge-aguardando", aprov
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
 
 interface Cliente { id: string; nome: string; telefone?: string; whatsapp?: string; }
-interface Servico { id: string; nome: string; preco_base: number; }
+interface Servico { id: string; nome: string; preco_base: number; descricao?: string; }
 interface Orcamento {
   id: string; numero?: number; status: string; valor_total: number; validade: string; os_id?: string;
   clientes?: { nome: string; whatsapp?: string; telefone?: string };
   nome_avulso?: string; placa_avulsa?: string; modelo_avulso?: string;
+  orcamento_servicos?: { servico_nome: string; descricao?: string; preco: number; quantidade: number }[];
 }
-interface Item { servico_id: string; servico_nome: string; preco: string; quantidade: string; }
+interface Item { servico_id: string; servico_nome: string; descricao?: string; preco: string; quantidade: string; }
 
 
 function ServicoAutocomplete({ servicos, item, onChange }: {
@@ -33,6 +34,7 @@ function ServicoAutocomplete({ servicos, item, onChange }: {
     setOpen(false);
     onChange("servico_id", s.id);
     onChange("servico_nome", s.nome);
+    onChange("descricao", s.descricao ?? "");
     onChange("preco", String(s.preco_base));
   }
 
@@ -79,14 +81,28 @@ function buildWaMsg(o: Orcamento) {
   const nome = (o.clientes?.nome ?? o.nome_avulso ?? "Cliente").split(" ")[0];
   const placa = o.placa_avulsa ?? "";
   const link = `${ORIGIN}/orcamento/${o.id}`;
-  return encodeURIComponent(
-    `Olá ${nome}! 👋
-Seu orçamento #${o.numero ?? ""} está pronto.
-${placa ? `Veículo: ${placa}
-` : ""}Total: ${fmt(o.valor_total)}
+  const itens = o.orcamento_servicos ?? [];
+  const listaServicos = itens.map(i => {
+    const preco = fmt(Number(i.preco) * (i.quantidade ?? 1));
+    const desc = i.descricao ? `\n   ${i.descricao}` : "";
+    const qtd = (i.quantidade ?? 1) > 1 ? ` (x${i.quantidade})` : "";
+    return `• *${i.servico_nome}*${qtd} — ${preco}${desc}`;
+  }).join("\n");
 
-Veja os detalhes aqui:
-${link}`
+  return encodeURIComponent(
+    `Olá *${nome}*! 👋
+
+Seu orçamento *#${o.numero ?? ""}* está pronto.${placa ? `\n🚗 Veículo: *${placa}*` : ""}
+
+📋 *Serviços:*
+${listaServicos || "• (ver link)"}
+
+💰 *Total: ${fmt(o.valor_total)}*
+
+🔗 Veja o orçamento completo:
+${link}
+
+Qualquer dúvida é só chamar! ✨`
   );
 }
 
@@ -112,7 +128,7 @@ export default function OrcamentosList({
   const total = Math.max(0, subtotal - (parseFloat(desconto)||0));
 
   function addItem() {
-    setItens(p => [...p, { servico_id: "", servico_nome: "", preco: "", quantidade: "1" }]);
+    setItens(p => [...p, { servico_id: "", servico_nome: "", descricao: "", preco: "", quantidade: "1" }]);
   }
 
   function setItem(i: number, k: string, v: string) {
@@ -136,7 +152,7 @@ export default function OrcamentosList({
         validade, observacoes,
         desconto: parseFloat(desconto)||0,
         valorTotal: total,
-        itens: itens.map(i => ({ servico_id: i.servico_id, servico_nome: i.servico_nome, preco: parseFloat(i.preco)||0, quantidade: parseInt(i.quantidade)||1 })),
+        itens: itens.map(i => ({ servico_id: i.servico_id, servico_nome: i.servico_nome, descricao: i.descricao ?? "", preco: parseFloat(i.preco)||0, quantidade: parseInt(i.quantidade)||1 })),
       }),
     });
     const data = await res.json();

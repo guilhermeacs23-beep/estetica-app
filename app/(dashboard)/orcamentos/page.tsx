@@ -9,10 +9,10 @@ export default async function OrcamentosPage() {
   const tid = profile!.tenant_id;
 
   const [{ data: orcamentos }, { data: clientes }, { data: servicos }] = await Promise.all([
-    supabaseAdmin.from("orcamentos").select("*, clientes(nome), veiculos(placa,modelo)")
+    supabaseAdmin.from("orcamentos").select("*, clientes(nome,telefone,whatsapp), veiculos(placa,modelo), orcamento_servicos(id,servico_nome,preco,quantidade,descricao)")
       .eq("tenant_id", tid).order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("clientes").select("id,nome,telefone").eq("tenant_id", tid).order("nome"),
-    supabaseAdmin.from("servicos").select("id,nome,preco_base").eq("tenant_id", tid).order("nome"),
+    supabaseAdmin.from("servicos").select("id,nome,preco_base,descricao").eq("tenant_id", tid).order("nome"),
   ]);
 
   return <OrcamentosList orcamentos={orcamentos??[]} clientes={clientes??[]} servicos={servicos??[]} />;
