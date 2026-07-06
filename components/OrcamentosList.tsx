@@ -15,7 +15,6 @@ interface Orcamento {
 }
 interface Item { servico_id: string; servico_nome: string; preco: string; quantidade: string; }
 
-interface Servico { id: string; nome: string; preco_base: number; }
 
 function ServicoAutocomplete({ servicos, item, onChange }: {
   servicos: Servico[];
