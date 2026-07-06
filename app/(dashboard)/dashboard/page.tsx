@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import Link from "next/link";
+import DashboardCalendar from "@/components/DashboardCalendar";
 
 async function getKPIs(tenantId: string) {
   const hoje = new Date().toISOString().split("T")[0];
@@ -116,6 +117,9 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Agenda mini-calendário */}
+      <DashboardCalendar />
 
       {/* Em breve — cards cinza com cadeado */}
       <div>
