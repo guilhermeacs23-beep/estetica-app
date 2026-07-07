@@ -79,8 +79,8 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
           padding:28px 32px; background:#fff; border-bottom:2px solid #111;
         }
         .logo-area { display:flex; align-items:center; gap:16px }
-        .logo-img  { width:72px; height:72px; border-radius:8px; background:#e5e7eb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0 }
-        .logo-img img { width:100%; height:100%; object-fit:cover }
+        .logo-img  { width:80px; height:80px; border-radius:8px; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; padding:6px }
+        .logo-img img { width:100%; height:100%; object-fit:contain }
         .logo-placeholder { font-size:11px; color:#9ca3af; text-align:center; line-height:1.3; padding:8px }
         .company-name { font-size:18px; font-weight:800; color:#111; letter-spacing:-0.3px }
         .company-sub  { font-size:11px; color:#6b7280; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px }
@@ -223,9 +223,8 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         {/* Cabeçalho empresa + número */}
         <div className="doc-header">
           <div className="logo-area">
-            <div className="logo-img" style={{ background:"#111" }}>
-              <img src={config?.logo_url ?? "/logo.png"} alt={nomeLoja}
-                style={{ width:"100%", height:"100%", objectFit:"contain", mixBlendMode:"screen" }} />
+            <div className="logo-img">
+              <img src={config?.logo_url ?? "/logo.png"} alt={nomeLoja} />
             </div>
             <div>
               <div className="company-name">{nomeLoja}</div>
@@ -357,7 +356,7 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         <div className="notinha-wrap">
           <div className="n-top">
             <img src={config?.logo_url ?? "/logo.png"} alt={nomeLoja}
-              style={{ height:48, width:"auto", objectFit:"contain", maxWidth:200, mixBlendMode:"screen", marginBottom:4 }} />
+              style={{ height:44, width:"auto", objectFit:"contain", maxWidth:200, marginBottom:4 }} />
             <div className="n-sub">Estética Automotiva</div>
           </div>
           <div className="n-body">
