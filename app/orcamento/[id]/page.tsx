@@ -192,7 +192,8 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
 
           body.mode-notinha .page-a4 { display:none }
           body.mode-notinha .page-notinha { display:block !important }
-          body.mode-notinha .notinha-wrap { margin:0; width:100%; border-radius:0; box-shadow:none }
+          body.mode-notinha .notinha-wrap { margin:0 auto; width:260px; border-radius:0; box-shadow:none }
+          @page { margin:0 }
           body.mode-notinha .n-top       { -webkit-print-color-adjust:exact; print-color-adjust:exact }
           body.mode-notinha .n-total-box { -webkit-print-color-adjust:exact; print-color-adjust:exact }
           body.mode-notinha .n-t-val     { color:#c0392b !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
@@ -222,11 +223,9 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         {/* Cabeçalho empresa + número */}
         <div className="doc-header">
           <div className="logo-area">
-            <div className="logo-img">
-              {config?.logo_url
-                ? <img src={config.logo_url} alt={nomeLoja} />
-                : <div className="logo-placeholder">LOGO<br/>EMPRESA</div>
-              }
+            <div className="logo-img" style={{ background:"#111" }}>
+              <img src={config?.logo_url ?? "/logo.png"} alt={nomeLoja}
+                style={{ width:"100%", height:"100%", objectFit:"contain", mixBlendMode:"screen" }} />
             </div>
             <div>
               <div className="company-name">{nomeLoja}</div>
@@ -357,7 +356,8 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
       <div className="page-notinha" id="page-notinha">
         <div className="notinha-wrap">
           <div className="n-top">
-            <div className="n-logo">{nomeLoja}</div>
+            <img src={config?.logo_url ?? "/logo.png"} alt={nomeLoja}
+              style={{ height:48, width:"auto", objectFit:"contain", maxWidth:200, mixBlendMode:"screen", marginBottom:4 }} />
             <div className="n-sub">Estética Automotiva</div>
           </div>
           <div className="n-body">
@@ -409,13 +409,12 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: `
-        document.getElementById('btn-a4').addEventListener('click', function(){
-          document.body.classList.remove('mode-notinha'); window.print();
-        });
         document.getElementById('btn-notinha').addEventListener('click', function(){
           document.body.classList.add('mode-notinha');
           window.print();
-          setTimeout(function(){ document.body.classList.remove('mode-notinha'); }, 1500);
+        });
+        document.getElementById('btn-a4').addEventListener('click', function(){
+          document.body.classList.remove('mode-notinha');
         });
         document.getElementById('btn-copy').addEventListener('click', function(){
           navigator.clipboard.writeText(window.location.href.split('?')[0]).then(function(){
@@ -437,10 +436,10 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         // Auto-print via ?print=a4|notinha
         var p = new URLSearchParams(window.location.search).get('print');
         if (p === 'notinha') {
-          // apply on-screen immediately so user sees notinha layout
+          // manter modo notinha na tela (não remover após print)
           document.body.classList.add('mode-notinha');
           window.addEventListener('load', function(){
-            setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove('mode-notinha'); },1500); }, 400);
+            setTimeout(function(){ window.print(); }, 400);
           });
         } else if (p === 'a4') {
           window.addEventListener('load', function(){
