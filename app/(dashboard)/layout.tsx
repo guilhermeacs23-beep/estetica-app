@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import SidebarClient from "@/components/SidebarClient";
 import MobileHeader from "@/components/MobileHeader";
+import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingWizard from "@/components/OnboardingWizard";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <MobileHeader />
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <div className="text-right hidden sm:block">
               <p className="text-xs font-medium" style={{ color: "var(--text)" }}>{profile?.nome}</p>
               <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>{profile?.role}</p>
