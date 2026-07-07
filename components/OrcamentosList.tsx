@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import ClienteAutocomplete from "@/components/ClienteAutocomplete";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
@@ -94,14 +95,17 @@ function ModalNovoCliente({ onClose, onCreated }: { onClose:()=>void; onCreated:
   );
 }
 
-/* ── 3-dot menu — usa position:fixed para escapar de overflow:hidden ── */
+/* ── 3-dot menu — Portal fora da árvore DOM + flip inteligente ── */
+const MENU_HEIGHT = 192; // ~4 itens × 48px
+
 function MenuAcoes({ o, onExcluir, onAprovar, onWa }: { o:Orcamento; onExcluir:()=>void; onAprovar:()=>void; onWa:()=>void }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top:0, right:0 });
+  const [pos, setPos] = useState<{ top?:number; bottom?:number; right:number }>({ top:0, right:0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!open) return;
     function handle(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
           btnRef.current && !btnRef.current.contains(e.target as Node)) {
@@ -110,49 +114,72 @@ function MenuAcoes({ o, onExcluir, onAprovar, onWa }: { o:Orcamento; onExcluir:(
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, []);
+  }, [open]);
 
-  function handleOpen() {
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const right = window.innerWidth - rect.right;
+    // flip para cima se não couber abaixo
+    if (rect.bottom + 4 + MENU_HEIGHT > window.innerHeight) {
+      setPos({ bottom: window.innerHeight - rect.top + 4, right });
+    } else {
+      setPos({ top: rect.bottom + 4, right });
+    }
     setOpen(x => !x);
   }
 
   const acoes = [
-    { label:"Visualizar",          icon:"👁", action:() => window.open(`/orcamento/${o.id}`,"_blank") },
-    { label:"Chamar no WhatsApp",  icon:"💬", action: onWa },
-    { label:"Aprovar",             icon:"✓",  action: onAprovar },
-    { label:"Cancelar",            icon:"✕",  action: onExcluir },
+    { label:"Visualizar",         icon:"👁", action:() => window.open(`/orcamento/${o.id}`,"_blank") },
+    { label:"WhatsApp",           icon:"💬", action: onWa },
+    { label:"Aprovar",            icon:"✓",  action: onAprovar },
+    { label:"Cancelar",           icon:"✕",  action: onExcluir },
   ];
+
+  const dropdown = open ? (
+    <div ref={menuRef} style={{
+      position:"fixed",
+      top: pos.top,
+      bottom: pos.bottom,
+      right: pos.right,
+      zIndex:9999,
+      background:"var(--bg-card)",
+      border:"1px solid var(--border)",
+      borderRadius:12,
+      boxShadow:"0 8px 32px rgba(0,0,0,0.25)",
+      minWidth:190,
+      overflow:"hidden",
+    }}>
+      {acoes.map((item, i) => (
+        <button key={item.label}
+          onClick={(e) => { e.stopPropagation(); item.action(); setOpen(false); }}
+          style={{
+            display:"flex", alignItems:"center", gap:10, width:"100%", padding:"12px 16px",
+            background:"none", border:"none", cursor:"pointer", textAlign:"left",
+            fontSize:13,
+            color: item.label === "Cancelar" ? "var(--danger)" : "var(--text)",
+            borderBottom: i < acoes.length-1 ? "1px solid var(--border)" : "none",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+          <span style={{ fontSize:15, minWidth:20, textAlign:"center" }}>{item.icon}</span>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <>
       <button ref={btnRef} onClick={handleOpen}
         style={{ width:32, height:32, borderRadius:8, border:"1px solid var(--border)",
           background:"var(--bg-card)", color:"var(--text-muted)", cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, flexShrink:0 }}>
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:18, fontWeight:700, flexShrink:0 }}>
         ⋮
       </button>
-      {open && (
-        <div ref={menuRef} style={{
-          position:"fixed", top:pos.top, right:pos.right, zIndex:9999,
-          background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12,
-          boxShadow:"0 8px 32px rgba(0,0,0,0.25)", minWidth:200, overflow:"hidden",
-        }}>
-          {acoes.map(item => (
-            <button key={item.label} onClick={() => { item.action(); setOpen(false); }}
-              style={{ display:"flex", alignItems:"center", gap:10, width:"100%", padding:"11px 16px",
-                background:"none", border:"none", cursor:"pointer", textAlign:"left",
-                fontSize:13, color: item.label === "Cancelar" ? "var(--danger)" : "var(--text)",
-                borderBottom:"1px solid var(--border)" }}
-              onMouseOver={e => (e.currentTarget.style.background = "var(--bg)")}
-              onMouseOut={e => (e.currentTarget.style.background = "none")}>
-              <span style={{ fontSize:15, minWidth:18 }}>{item.icon}</span> {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {typeof document !== "undefined" && createPortal(dropdown, document.body)}
     </>
   );
 }
@@ -459,10 +486,8 @@ export default function OrcamentosList({
               const nItens = o.orcamento_servicos?.length ?? 0;
               const cor = CARD_BG[o.status] ?? "#9ca3af";
               return (
-                <div key={o.id} style={{ borderRadius:14, overflow:"hidden", border:"1px solid var(--border)",
-                  background:"var(--bg-card)", cursor:"pointer", transition:"transform 0.15s, box-shadow 0.15s" }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.15)"}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="";(e.currentTarget as HTMLElement).style.boxShadow=""}}>
+                <div key={o.id} className="os-card" style={{ borderRadius:14, overflow:"hidden", border:"1px solid var(--border)",
+                  background:"var(--bg-card)", cursor:"pointer" }}>
                   {/* card header colorido */}
                   <div style={{ background:cor, padding:"14px 16px" }}>
                     <p style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:600 }}>Orçamento #{o.numero}</p>
