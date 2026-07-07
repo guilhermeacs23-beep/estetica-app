@@ -44,18 +44,23 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
     >
       <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
         <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0" style={{ textDecoration: "none" }} title="Voltar ao Dashboard">
-          {!collapsed ? (
-            logoUrl
-              ? <img src={logoUrl} alt="Logo" style={{ height:40, width:"auto", objectFit:"contain", maxWidth:148, borderRadius:6 }} />
-              : <span className="font-bold text-base truncate" style={{ color:"var(--text)" }}>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" style={ collapsed
+              ? { width:36, height:36, objectFit:"cover", borderRadius:8 }
+              : { height:40, width:"auto", objectFit:"contain", maxWidth:148, borderRadius:6 }
+            } />
+          ) : (
+            <>
+              <div className="rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
+                style={{ width: collapsed ? 36 : 40, height: collapsed ? 36 : 40, fontSize: collapsed ? 14 : 18, background:"var(--primary)", letterSpacing:"-0.5px" }}>
+                {(nomeLoja ?? ((profile as any)?.tenants?.nome_fantasia as string) ?? "R")[0]?.toUpperCase()}
+              </div>
+              {!collapsed && (
+                <span className="font-bold text-sm truncate" style={{ color:"var(--text)", letterSpacing:"-0.3px" }}>
                   {nomeLoja ?? ((profile as any)?.tenants?.nome_fantasia as string) ?? "Studio RPM"}
                 </span>
-          ) : (
-            logoUrl
-              ? <img src={logoUrl} alt="Logo" style={{ width:36, height:36, objectFit:"cover", borderRadius:8 }} />
-              : <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "var(--primary)" }}>
-                  {(nomeLoja ?? ((profile as any)?.tenants?.nome_fantasia as string) ?? "R")[0]?.toUpperCase()}
-                </div>
+              )}
+            </>
           )}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>
