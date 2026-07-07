@@ -14,15 +14,16 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
 
   const { data: config } = await supabaseAdmin
     .from("configuracoes")
-    .select("nome_fantasia, telefone, whatsapp, email, cidade, instagram")
+    .select("nome_fantasia, telefone, whatsapp, email, cidade, instagram, logo_url")
     .eq("tenant_id", o.tenant_id)
     .single();
 
   const nomeLoja    = config?.nome_fantasia ?? "Studio RPM";
   const nomeCliente = o.clientes?.nome ?? o.nome_avulso ?? "";
   const placa       = o.placa_avulsa ?? o.veiculos?.placa ?? "";
-  const modelo      = o.modelo_avulso ?? (o.veiculos ? `${o.veiculos.marca ?? ""} ${o.veiculos.modelo ?? ""}`.trim() : "");
-  const veicAnо     = o.veiculos?.ano ?? "";
+  const modelo      = o.modelo_avulso ?? o.veiculos?.modelo ?? "";
+  const marca       = o.veiculos?.marca ?? "";
+  const veicAno     = o.veiculos?.ano ?? "";
   const veicKm      = o.veiculos?.km ? `${Number(o.veiculos.km).toLocaleString("pt-BR")} km` : "";
   const itens: any[] = o.orcamento_servicos ?? [];
   const subtotal    = itens.reduce((s: number, i: any) => s + (Number(i.preco) * (i.quantidade ?? 1)), 0);
@@ -40,424 +41,405 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
   };
   const st = STATUS[o.status] ?? STATUS.pendente;
 
-  const itensJson = JSON.stringify(itens.map((i: any) => ({
-    nome: i.servico_nome,
-    desc: i.descricao ?? "",
-    preco: Number(i.preco),
-    qtd: i.quantidade ?? 1,
-  })));
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
-        html { font-size:15px }
-        body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#0f0f0f; color:#1a1a1a; min-height:100vh; }
+        body { font-family: "Segoe UI", Arial, sans-serif; background:#e5e7eb; color:#1a1a1a; font-size:14px; }
 
-        /* ── Topbar ── */
+        /* ── Topbar (tela apenas) ── */
         .topbar {
           position:sticky; top:0; z-index:50;
-          background:rgba(15,15,15,0.95); backdrop-filter:blur(12px);
-          border-bottom:1px solid #2a2a2a;
-          padding:12px 20px;
-          display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;
+          background:#111; border-bottom:1px solid #222;
+          padding:10px 20px;
+          display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap;
         }
-        .btn-a4 {
-          display:flex; align-items:center; gap:8px;
-          background:#c0392b; color:#fff; border:none; border-radius:8px;
-          padding:10px 20px; font-size:13px; font-weight:700; cursor:pointer;
-        }
-        .btn-a4:hover { background:#a93226 }
-        .btn-notinha {
-          display:flex; align-items:center; gap:8px;
-          background:#1a6e3b; color:#fff; border:none; border-radius:8px;
-          padding:10px 20px; font-size:13px; font-weight:700; cursor:pointer;
-        }
-        .btn-notinha:hover { background:#155c30 }
-        .btn-link {
-          display:flex; align-items:center; gap:8px;
-          background:transparent; color:#ccc; border:1px solid #3a3a3a; border-radius:8px;
-          padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer;
-        }
-        .btn-link:hover { border-color:#666; color:#fff }
-        /* Selecionar campos */
-        .sel-wrap { position:relative }
-        .btn-sel {
-          display:flex; align-items:center; gap:8px;
-          background:transparent; color:#ccc; border:1px solid #3a3a3a; border-radius:8px;
-          padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer;
-        }
-        .btn-sel:hover { border-color:#666; color:#fff }
-        .sel-dropdown {
-          display:none; position:absolute; top:calc(100% + 8px); right:0;
-          background:#1a1a1a; border:1px solid #333; border-radius:12px;
-          padding:16px; min-width:220px; z-index:100;
-          box-shadow:0 8px 32px rgba(0,0,0,0.5);
-        }
+        .btn-red   { display:flex;align-items:center;gap:6px;background:#c0392b;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none }
+        .btn-green { display:flex;align-items:center;gap:6px;background:#1a6e3b;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none }
+        .btn-gray  { display:flex;align-items:center;gap:6px;background:transparent;color:#ccc;border:1px solid #444;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer }
+        .sel-wrap  { position:relative }
+        .sel-dropdown { display:none;position:absolute;top:calc(100% + 6px);right:0;background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;min-width:210px;z-index:100;box-shadow:0 8px 32px rgba(0,0,0,0.5) }
         .sel-dropdown.open { display:block }
-        .sel-item { display:flex; align-items:center; gap:10px; padding:8px 0; cursor:pointer; border-bottom:1px solid #2a2a2a; }
+        .sel-item  { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #2a2a2a }
         .sel-item:last-child { border-bottom:none }
-        .sel-item label { font-size:13px; color:#ccc; cursor:pointer; flex:1 }
-        .sel-item input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#c0392b }
-        .sel-title { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px }
+        .sel-item label { font-size:13px;color:#ccc;cursor:pointer;flex:1 }
+        .sel-item input  { width:15px;height:15px;cursor:pointer;accent-color:#c0392b }
+        .sel-title { font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px }
 
-        /* ── A4 page ── */
+        /* ── Página A4 ── */
         .page-a4 {
-          max-width:780px; margin:28px auto; background:#fff;
-          border-radius:16px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,0.6);
-        }
-        .hdr {
-          background:linear-gradient(135deg,#111 60%,#1e1e1e 100%);
-          padding:36px 40px 32px; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
-          position:relative; overflow:hidden;
-        }
-        .hdr::before { content:""; position:absolute; right:-40px; top:-40px; width:220px; height:220px; background:radial-gradient(circle,rgba(192,57,43,0.18) 0%,transparent 70%); border-radius:50%; }
-        .logo-mark { width:52px; height:52px; flex-shrink:0; background:#c0392b; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px; color:#fff; box-shadow:0 4px 16px rgba(192,57,43,0.4); }
-        .hdr-brand { display:flex; align-items:center; gap:16px }
-        .brand-name { font-size:22px; font-weight:800; color:#fff; letter-spacing:-0.3px }
-        .brand-sub  { font-size:11px; color:#888; margin-top:3px; letter-spacing:0.5px; text-transform:uppercase }
-        .hdr-num { text-align:right; position:relative; z-index:1 }
-        .hdr-num .label { font-size:10px; color:#666; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px }
-        .hdr-num .num   { font-size:36px; font-weight:900; color:#c0392b; line-height:1; letter-spacing:-1px }
-        .statusbar { background:#f8f8f8; border-bottom:1px solid #ebebeb; padding:14px 40px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-        .badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; }
-        .meta-item { font-size:12px; color:#777; display:flex; align-items:center; gap:5px }
-        .meta-item strong { color:#333; font-weight:600 }
-        .sep { color:#ddd; font-size:14px }
-        .body-a4 { padding:36px 40px }
-        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:36px }
-        .info-card { border:1px solid #e8e8e8; border-radius:12px; padding:20px 22px; background:#fafafa; }
-        .ic-label { font-size:9px; font-weight:800; color:#999; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-        .ic-label::before { content:""; display:inline-block; width:3px; height:12px; background:#c0392b; border-radius:2px; }
-        .ic-name { font-size:17px; font-weight:700; color:#111; margin-bottom:6px }
-        .ic-detail { font-size:12px; color:#777; line-height:1.6 }
-        .ic-placa { font-size:24px; font-weight:900; color:#c0392b; letter-spacing:2px; margin-bottom:4px; }
-        .ic-modelo { font-size:14px; font-weight:500; color:#555 }
-        .sec-title { font-size:9px; font-weight:800; color:#aaa; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-        .sec-title::after { content:""; flex:1; height:1px; background:#e8e8e8; }
-        .servicos-table { width:100%; border-collapse:collapse; margin-bottom:4px }
-        .servicos-table thead tr { border-bottom:2px solid #111; }
-        .servicos-table th { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.5px; padding:10px 12px; text-align:left; }
-        .servicos-table th:not(:first-child) { text-align:right }
-        .servicos-table td { padding:16px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
-        .servicos-table tr:last-child td { border-bottom:none }
-        .servico-nome { font-size:14px; font-weight:700; color:#111; margin-bottom:4px }
-        .servico-desc { font-size:12px; color:#888; line-height:1.5; max-width:340px }
-        .td-right { text-align:right; font-size:13px; color:#444; white-space:nowrap }
-        .td-total { text-align:right; font-size:14px; font-weight:700; color:#111; white-space:nowrap }
-        .totais { margin-top:20px; border-top:1px solid #ebebeb; padding-top:16px }
-        .trow { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#777; padding:5px 0; }
-        .trow.desc-row { color:#c0392b }
-        .trow.total-row { font-size:22px; font-weight:900; color:#111; padding-top:14px; margin-top:8px; border-top:2px solid #111; }
-        .trow.total-row span:last-child { color:#c0392b }
-        .obs-box { margin-top:28px; padding:18px 22px; background:#fffbf0; border:1px solid #f0e0a0; border-radius:12px; border-left:4px solid #f59e0b; }
-        .obs-box .obs-label { font-size:10px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px }
-        .obs-box p { font-size:13px; color:#78350f; line-height:1.6 }
-        .footer { margin-top:40px; background:#111; padding:28px 40px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
-        .footer-brand { font-size:13px; font-weight:700; color:#fff }
-        .footer-sub { font-size:11px; color:#666; margin-top:2px }
-        .footer-validity { font-size:12px; color:#888; text-align:right }
-        .footer-validity strong { color:#fff }
-
-        /* ── Notinha ── */
-        .page-notinha { display:none; }
-        .notinha-wrap {
-          width:320px; margin:28px auto; background:#fff;
-          border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5);
-          font-family:"Courier New", monospace; font-size:12px; color:#000;
+          max-width:800px; margin:24px auto 48px; background:#fff;
+          border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.18);
           overflow:hidden;
         }
-        .notinha-top {
-          background:#111; padding:18px 16px 14px; text-align:center;
-        }
-        .notinha-top .n-logo { font-size:16px; font-weight:900; color:#fff; letter-spacing:1px }
-        .notinha-top .n-sub { font-size:10px; color:#888; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px }
-        .notinha-divider { border:none; border-top:1px dashed #ccc; margin:8px 0 }
-        .notinha-body { padding:14px 16px }
-        .n-row { display:flex; justify-content:space-between; margin:3px 0; font-size:11px }
-        .n-label { color:#555; flex-shrink:0; margin-right:8px }
-        .n-val { font-weight:700; color:#111; text-align:right }
-        .n-section-title {
-          font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
-          color:#888; margin:10px 0 6px; text-align:center;
-          border-top:1px dashed #ddd; border-bottom:1px dashed #ddd; padding:4px 0;
-        }
-        .n-item { margin:6px 0; border-bottom:1px dotted #eee; padding-bottom:6px }
-        .n-item:last-child { border-bottom:none }
-        .n-item-nome { font-weight:700; font-size:12px; color:#000 }
-        .n-item-desc { font-size:10px; color:#777; margin-top:1px; line-height:1.4 }
-        .n-item-total { display:flex; justify-content:space-between; font-size:11px; margin-top:3px }
-        .n-total-box {
-          background:#111; color:#fff; padding:10px 16px;
-          display:flex; justify-content:space-between; align-items:center;
-        }
-        .n-total-label { font-size:11px; text-transform:uppercase; letter-spacing:1px }
-        .n-total-val { font-size:18px; font-weight:900; color:#c0392b }
-        .n-footer { padding:10px 16px 14px; text-align:center; font-size:10px; color:#999; line-height:1.6; border-top:1px dashed #ddd }
-        .n-status { display:inline-block; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; margin:4px 0 8px }
 
-        /* ── Print media ── */
+        /* Cabeçalho empresa */
+        .doc-header {
+          display:flex; justify-content:space-between; align-items:flex-start;
+          padding:28px 32px; background:#fff; border-bottom:2px solid #111;
+        }
+        .logo-area { display:flex; align-items:center; gap:16px }
+        .logo-img  { width:72px; height:72px; border-radius:8px; background:#e5e7eb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0 }
+        .logo-img img { width:100%; height:100%; object-fit:cover }
+        .logo-placeholder { font-size:11px; color:#9ca3af; text-align:center; line-height:1.3; padding:8px }
+        .company-name { font-size:18px; font-weight:800; color:#111; letter-spacing:-0.3px }
+        .company-sub  { font-size:11px; color:#6b7280; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px }
+        .doc-meta     { text-align:right }
+        .doc-meta .orc-num  { font-size:14px; font-weight:700; color:#111 }
+        .doc-meta .orc-date { font-size:13px; color:#374151; margin-top:3px }
+        .doc-meta .orc-val  { font-size:13px; color:#374151; margin-top:1px }
+        .status-badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 12px; border-radius:20px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px }
+
+        /* Seções */
+        .sec-header {
+          display:flex; align-items:center; gap:10px;
+          background:#f3f4f6; padding:10px 32px; font-size:13px; font-weight:700; color:#374151;
+          border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;
+        }
+        .sec-body { padding:16px 32px }
+
+        /* Info cliente */
+        .info-row { display:flex; gap:32px; flex-wrap:wrap }
+        .info-field { display:flex; flex-direction:column; gap:1px }
+        .info-field .lbl { font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px }
+        .info-field .val { font-size:14px; color:#111; font-weight:600 }
+
+        /* Veículo row */
+        .veiculo-row { display:flex; gap:28px; flex-wrap:wrap; margin-bottom:6px }
+        .veiculo-km  { font-size:13px; font-weight:700; color:#374151; margin-top:4px }
+        .veiculo-km span { color:#6b7280; font-weight:400 }
+
+        /* Serviços */
+        .servicos-wrap { padding:0 32px }
+        .servico-linha {
+          display:flex; justify-content:space-between; align-items:baseline;
+          padding:14px 0; border-bottom:1px solid #f0f0f0;
+        }
+        .servico-linha:last-child { border-bottom:none }
+        .serv-nome { font-size:14px; font-weight:600; color:#111 }
+        .serv-desc { font-size:12px; color:#6b7280; margin-top:2px; line-height:1.4 }
+        .serv-preco { font-size:14px; font-weight:700; color:#111; white-space:nowrap; margin-left:20px }
+        .total-servicos {
+          display:flex; justify-content:flex-end; padding:12px 32px;
+          font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb;
+          background:#fafafa;
+        }
+        .total-servicos strong { color:#16a34a; margin-left:6px }
+
+        /* Valores finais */
+        .valores-grid {
+          display:grid; grid-template-columns:1fr 1fr 1fr;
+          padding:20px 32px; gap:16px; border-top:1px solid #e5e7eb;
+        }
+        .valor-item { display:flex; flex-direction:column; gap:3px }
+        .valor-item .v-label { font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px }
+        .valor-item .v-val   { font-size:14px; font-weight:700; color:#111 }
+        .valor-item .v-total { font-size:18px; font-weight:900; color:#16a34a }
+        .valor-item .v-desc  { color:#c0392b }
+
+        /* Obs */
+        .obs-box { margin:0 32px 20px; padding:14px 18px; background:#fffbf0; border:1px solid #fde68a; border-radius:8px; border-left:4px solid #f59e0b }
+        .obs-box .obs-label { font-size:10px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px }
+        .obs-box p { font-size:13px; color:#78350f; line-height:1.6 }
+
+        /* Rodapé */
+        .doc-footer {
+          padding:16px 32px; background:#111; display:flex; justify-content:space-between; align-items:center;
+          flex-wrap:wrap; gap:10px;
+        }
+        .footer-l { font-size:12px; color:#9ca3af }
+        .footer-l strong { color:#fff; display:block; font-size:13px; margin-bottom:2px }
+        .footer-r { font-size:12px; color:#6b7280; text-align:right }
+
+        /* ── NOTINHA ── */
+        .page-notinha { display:none }
+        .notinha-wrap {
+          width:320px; margin:24px auto; background:#fff;
+          border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5);
+          font-family:"Courier New", monospace; font-size:12px; color:#000; overflow:hidden;
+        }
+        .n-top { background:#111; padding:16px; text-align:center }
+        .n-top .n-logo { font-size:15px; font-weight:900; color:#fff; letter-spacing:1px }
+        .n-top .n-sub  { font-size:10px; color:#888; margin-top:2px; text-transform:uppercase }
+        .n-body { padding:12px 14px }
+        .n-row  { display:flex; justify-content:space-between; margin:3px 0; font-size:11px }
+        .n-label { color:#555; flex-shrink:0; margin-right:6px }
+        .n-val   { font-weight:700; color:#111; text-align:right }
+        .n-divider { border:none; border-top:1px dashed #ccc; margin:8px 0 }
+        .n-sec   { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#888; text-align:center; border-top:1px dashed #ddd; border-bottom:1px dashed #ddd; padding:4px 0; margin:8px 0 }
+        .n-item  { margin:5px 0; border-bottom:1px dotted #eee; padding-bottom:5px }
+        .n-item:last-child { border-bottom:none }
+        .n-item-nome  { font-weight:700; font-size:12px }
+        .n-item-desc  { font-size:10px; color:#777; margin-top:1px; line-height:1.4 }
+        .n-item-total { display:flex; justify-content:space-between; font-size:11px; margin-top:3px }
+        .n-total-box  { background:#111; color:#fff; padding:10px 14px; display:flex; justify-content:space-between; align-items:center }
+        .n-total-box .n-t-label { font-size:11px; text-transform:uppercase; letter-spacing:1px }
+        .n-total-box .n-t-val   { font-size:17px; font-weight:900; color:#c0392b }
+        .n-footer { padding:10px 14px 14px; text-align:center; font-size:10px; color:#999; line-height:1.6; border-top:1px dashed #ddd }
+        .n-badge  { display:inline-block; font-size:10px; font-weight:700; padding:2px 10px; border-radius:20px; margin:3px 0 6px }
+
+        /* ── Print ── */
         @media print {
           .topbar { display:none }
           body { background:#fff }
           .page-a4 { margin:0; border-radius:0; box-shadow:none }
-          .hdr { -webkit-print-color-adjust:exact; print-color-adjust:exact }
-          .footer { -webkit-print-color-adjust:exact; print-color-adjust:exact }
-          .page-notinha { display:none }
+          .doc-header { -webkit-print-color-adjust:exact; print-color-adjust:exact }
+          .doc-footer { -webkit-print-color-adjust:exact; print-color-adjust:exact }
+          .sec-header { -webkit-print-color-adjust:exact; print-color-adjust:exact }
+          .obs-box    { -webkit-print-color-adjust:exact; print-color-adjust:exact }
 
           body.mode-notinha .page-a4 { display:none }
           body.mode-notinha .page-notinha { display:block !important }
           body.mode-notinha .notinha-wrap { margin:0; width:100%; border-radius:0; box-shadow:none }
-          body.mode-notinha .notinha-top { -webkit-print-color-adjust:exact; print-color-adjust:exact }
+          body.mode-notinha .n-top       { -webkit-print-color-adjust:exact; print-color-adjust:exact }
           body.mode-notinha .n-total-box { -webkit-print-color-adjust:exact; print-color-adjust:exact }
-          body.mode-notinha .n-total-val { color:#c0392b !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
+          body.mode-notinha .n-t-val     { color:#c0392b !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
         }
-
-        @media (max-width:600px) {
-          .hdr { padding:24px 20px 20px }
-          .body-a4 { padding:24px 20px }
-          .statusbar { padding:12px 20px }
-          .info-grid { grid-template-columns:1fr }
-          .hdr-num .num { font-size:28px }
-          .footer { padding:20px }
-        }
-
-        /* hide/show controlled by JS */
         .field-desc.hidden, .field-obs.hidden, .field-contact.hidden { display:none !important }
       `}} />
 
       {/* TOPBAR */}
       <div className="topbar">
-        <button className="btn-a4" id="btn-a4">🖨️ Imprimir A4</button>
-        <button className="btn-notinha" id="btn-notinha">🧾 Imprimir Notinha</button>
-        <button className="btn-link" id="btn-copy">📋 Copiar Link</button>
+        <button className="btn-red"   id="btn-a4">🖨️ Imprimir A4</button>
+        <button className="btn-green" id="btn-notinha">🧾 Imprimir Notinha</button>
+        <button className="btn-gray"  id="btn-copy">📋 Copiar Link</button>
         <div className="sel-wrap">
-          <button className="btn-sel" id="btn-sel">⚙️ Campos ▾</button>
+          <button className="btn-gray" id="btn-sel">⚙️ Campos ▾</button>
           <div className="sel-dropdown" id="sel-dropdown">
-            <div className="sel-title">Incluir no orçamento</div>
-            <label className="sel-item"><input type="checkbox" id="chk-desc" checked /> <label htmlFor="chk-desc">Descrições dos serviços</label></label>
-            <label className="sel-item"><input type="checkbox" id="chk-obs" checked /> <label htmlFor="chk-obs">Observações</label></label>
-            <label className="sel-item"><input type="checkbox" id="chk-contact" checked /> <label htmlFor="chk-contact">Contato do cliente</label></label>
+            <div className="sel-title">Exibir no orçamento</div>
+            <label className="sel-item"><input type="checkbox" id="chk-desc" defaultChecked /><label htmlFor="chk-desc">Descrição dos serviços</label></label>
+            <label className="sel-item"><input type="checkbox" id="chk-obs"  defaultChecked /><label htmlFor="chk-obs">Observações</label></label>
+            <label className="sel-item"><input type="checkbox" id="chk-contact" defaultChecked /><label htmlFor="chk-contact">Contato do cliente</label></label>
           </div>
         </div>
       </div>
 
-      {/* A4 PAGE */}
+      {/* ── PÁGINA A4 ── */}
       <div className="page-a4">
-        <div className="hdr">
-          <div className="hdr-brand">
-            <div className="logo-mark">R</div>
+
+        {/* Cabeçalho empresa + número */}
+        <div className="doc-header">
+          <div className="logo-area">
+            <div className="logo-img">
+              {config?.logo_url
+                ? <img src={config.logo_url} alt={nomeLoja} />
+                : <div className="logo-placeholder">LOGO<br/>EMPRESA</div>
+              }
+            </div>
             <div>
-              <div className="brand-name">{nomeLoja}</div>
-              <div className="brand-sub">Estética Automotiva</div>
+              <div className="company-name">{nomeLoja}</div>
+              <div className="company-sub">Estética Automotiva</div>
+              {config?.cidade && <div style={{ fontSize:12, color:"#9ca3af", marginTop:2 }}>{config.cidade}</div>}
             </div>
           </div>
-          <div className="hdr-num">
-            <div className="label">Orçamento</div>
-            <div className="num">#{o.numero}</div>
+          <div className="doc-meta">
+            <div className="status-badge" style={{ color: st.color, background: st.bg }}>{st.label}</div>
+            <div className="orc-num">Orçamento Nº {o.numero} — {emitido}</div>
+            {validade && <div className="orc-val">Validade do orçamento: {validade}</div>}
           </div>
         </div>
-        <div className="statusbar">
-          <span className="badge" style={{ color: st.color, background: st.bg }}>{st.label}</span>
-          <span className="sep">·</span>
-          <span className="meta-item">Emitido em <strong>{emitido}</strong></span>
-          {validade && <><span className="sep">·</span><span className="meta-item">Válido até <strong>{validade}</strong></span></>}
+
+        {/* Informações do Cliente */}
+        <div className="sec-header">
+          <span>👤</span> Informações do Cliente
         </div>
-        <div className="body-a4">
-          <div className="info-grid">
-            <div className="info-card">
-              <div className="ic-label">Cliente</div>
-              <div className="ic-name">{nomeCliente || "—"}</div>
-              <div className="ic-detail field-contact">
-                {o.clientes?.telefone && <div>📞 {o.clientes.telefone}</div>}
-                {o.clientes?.whatsapp && <div>💬 {o.clientes.whatsapp}</div>}
-                {o.clientes?.email && <div>✉️ {o.clientes.email}</div>}
+        <div className="sec-body">
+          <div className="info-row">
+            <div className="info-field">
+              <span className="lbl">Nome</span>
+              <span className="val">{nomeCliente || "—"}</span>
+            </div>
+            <div className="info-field field-contact">
+              <span className="lbl">WhatsApp</span>
+              <span className="val">{o.clientes?.whatsapp || "—"}</span>
+            </div>
+            {o.clientes?.telefone && (
+              <div className="info-field field-contact">
+                <span className="lbl">Telefone</span>
+                <span className="val">{o.clientes.telefone}</span>
               </div>
-            </div>
-            <div className="info-card">
-              <div className="ic-label">Veículo</div>
-              {placa
-                ? <>
-                    <div className="ic-placa">{placa}</div>
-                    <div className="ic-modelo">{modelo || "—"}</div>
-                    <div className="ic-detail" style={{ marginTop:6 }}>
-                      {veicAnо && <span style={{ marginRight:12 }}>📅 {veicAnо}</span>}
-                      {veicKm && <span>🛣 {veicKm}</span>}
-                    </div>
-                  </>
-                : <div className="ic-detail" style={{ color:"#bbb" }}>Não informado</div>
-              }
-            </div>
+            )}
+            {o.clientes?.email && (
+              <div className="info-field field-contact">
+                <span className="lbl">E-mail</span>
+                <span className="val">{o.clientes.email}</span>
+              </div>
+            )}
           </div>
-          <div className="sec-title">Serviços</div>
-          <table className="servicos-table">
-            <thead>
-              <tr>
-                <th style={{ width:"50%" }}>Serviço / Descrição</th>
-                <th>Qtd</th>
-                <th>Unit.</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody id="a4-servicos">
-              {itens.length === 0
-                ? <tr><td colSpan={4} style={{ textAlign:"center", color:"#bbb", padding:"28px" }}>Nenhum serviço</td></tr>
-                : itens.map((it: any) => (
-                    <tr key={it.id}>
-                      <td>
-                        <div className="servico-nome">{it.servico_nome}</div>
-                        {it.descricao && <div className="servico-desc field-desc">{it.descricao}</div>}
-                      </td>
-                      <td className="td-right">{it.quantidade ?? 1}</td>
-                      <td className="td-right">{fmt(Number(it.preco))}</td>
-                      <td className="td-total">{fmt(Number(it.preco) * (it.quantidade ?? 1))}</td>
-                    </tr>
-                  ))
-              }
-            </tbody>
-          </table>
-          <div className="totais">
-            <div className="trow"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
-            {desconto > 0 && <div className="trow desc-row"><span>Desconto</span><span>− {fmt(desconto)}</span></div>}
-            <div className="trow total-row"><span>Total</span><span>{fmt(total)}</span></div>
-          </div>
-          {o.observacoes && (
-            <div className="obs-box field-obs">
-              <div className="obs-label">Observações</div>
-              <p>{o.observacoes}</p>
-            </div>
-          )}
         </div>
-        <div className="footer">
-          <div>
-            <div className="footer-brand">{nomeLoja}</div>
-            <div className="footer-sub">
-              {config?.whatsapp && <span>📱 {config.whatsapp}</span>}
-              {config?.instagram && <span style={{ marginLeft: 12 }}>📸 {config.instagram}</span>}
+
+        {/* Veículo */}
+        {(placa || modelo || marca) && (
+          <>
+            <div className="sec-header">
+              <span>🚗</span> Veículo e serviço
             </div>
+            <div className="sec-body">
+              <div className="veiculo-row">
+                {marca && <div className="info-field"><span className="lbl">Marca</span><span className="val">{marca.toUpperCase()}</span></div>}
+                {modelo && <div className="info-field"><span className="lbl">Modelo</span><span className="val">{modelo.toUpperCase()}</span></div>}
+                {placa && <div className="info-field"><span className="lbl">Placa</span><span className="val">{placa.toUpperCase()}</span></div>}
+                {veicAno && <div className="info-field"><span className="lbl">Ano</span><span className="val">{veicAno}</span></div>}
+              </div>
+              {veicKm && (
+                <div className="veiculo-km"><span>Quilometragem </span>{veicKm}</div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Serviços */}
+        <div className="sec-header">
+          <span>⚙️</span> Serviços Realizados
+        </div>
+        <div className="servicos-wrap">
+          {itens.length === 0
+            ? <div style={{ padding:"28px 0", textAlign:"center", color:"#9ca3af" }}>Nenhum serviço adicionado</div>
+            : itens.map((it: any) => (
+              <div key={it.id} className="servico-linha">
+                <div>
+                  <div className="serv-nome">{it.servico_nome}{it.quantidade > 1 ? ` ×${it.quantidade}` : ""}</div>
+                  {it.descricao && <div className="serv-desc field-desc">{it.descricao}</div>}
+                </div>
+                <div className="serv-preco">{fmt(Number(it.preco) * (it.quantidade ?? 1))}</div>
+              </div>
+            ))
+          }
+        </div>
+        <div className="total-servicos">
+          Total de serviços: <strong>{fmt(subtotal)}</strong>
+        </div>
+
+        {/* Valores finais */}
+        <div className="sec-header" style={{ marginTop:0 }}>
+          <span>💰</span> Valores finais
+        </div>
+        <div className="valores-grid">
+          <div className="valor-item">
+            <span className="v-label">Subtotal</span>
+            <span className="v-val">{fmt(subtotal)}</span>
           </div>
-          <div className="footer-validity">
-            {validade && <div>Válido até <strong>{validade}</strong></div>}
-            <div style={{ marginTop:4 }}>Obrigado pela preferência 🙏</div>
+          <div className="valor-item">
+            <span className="v-label">Desconto</span>
+            <span className={`v-val${desconto > 0 ? " v-desc" : ""}`}>{desconto > 0 ? `R$ ${desconto.toLocaleString("pt-BR", { minimumFractionDigits:2 })}` : "—"}</span>
+          </div>
+          <div className="valor-item">
+            <span className="v-label">Total da venda</span>
+            <span className="v-total">{fmt(total)}</span>
+          </div>
+        </div>
+
+        {/* Observações */}
+        {o.observacoes && (
+          <div className="obs-box field-obs">
+            <div className="obs-label">Observações</div>
+            <p>{o.observacoes}</p>
+          </div>
+        )}
+
+        {/* Rodapé */}
+        <div className="doc-footer">
+          <div className="footer-l">
+            <strong>{nomeLoja}</strong>
+            {config?.whatsapp && <span>📱 {config.whatsapp}</span>}
+            {config?.instagram && <span style={{ marginLeft:12 }}>📸 {config.instagram}</span>}
+          </div>
+          <div className="footer-r">
+            {validade && <div>Válido até {validade}</div>}
+            <div>Obrigado pela preferência 🙏</div>
           </div>
         </div>
       </div>
 
-      {/* NOTINHA PAGE */}
+      {/* ── NOTINHA ── */}
       <div className="page-notinha" id="page-notinha">
         <div className="notinha-wrap">
-          <div className="notinha-top">
+          <div className="n-top">
             <div className="n-logo">{nomeLoja}</div>
             <div className="n-sub">Estética Automotiva</div>
           </div>
-          <div className="notinha-body">
-            <div style={{ textAlign:"center", marginBottom:6 }}>
-              <span className="n-status" style={{ color: st.color, background: st.bg }}>{st.label}</span>
+          <div className="n-body">
+            <div style={{ textAlign:"center" }}>
+              <span className="n-badge" style={{ color: st.color, background: st.bg }}>{st.label}</span>
             </div>
             <div className="n-row"><span className="n-label">Orçamento</span><span className="n-val">#{o.numero}</span></div>
             <div className="n-row"><span className="n-label">Emitido</span><span className="n-val">{emitido}</span></div>
             {validade && <div className="n-row"><span className="n-label">Validade</span><span className="n-val">{validade}</span></div>}
-            <hr className="notinha-divider" />
+            <hr className="n-divider" />
             <div className="n-row field-contact"><span className="n-label">Cliente</span><span className="n-val">{nomeCliente || "—"}</span></div>
             {o.clientes?.whatsapp && <div className="n-row field-contact"><span className="n-label">WhatsApp</span><span className="n-val">{o.clientes.whatsapp}</span></div>}
             {placa && <>
               <div className="n-row"><span className="n-label">Placa</span><span className="n-val" style={{ color:"#c0392b", fontWeight:900 }}>{placa}</span></div>
               {modelo && <div className="n-row"><span className="n-label">Veículo</span><span className="n-val">{modelo}</span></div>}
-              {veicAnо && <div className="n-row"><span className="n-label">Ano</span><span className="n-val">{veicAnо}</span></div>}
+              {veicAno && <div className="n-row"><span className="n-label">Ano</span><span className="n-val">{veicAno}</span></div>}
               {veicKm && <div className="n-row"><span className="n-label">KM</span><span className="n-val">{veicKm}</span></div>}
             </>}
-            <div className="n-section-title">Serviços</div>
-            <div id="n-servicos">
-              {itens.map((it: any, idx: number) => (
-                <div key={idx} className="n-item">
-                  <div className="n-item-nome">{it.servico_nome}</div>
-                  {it.descricao && <div className="n-item-desc field-desc">{it.descricao}</div>}
-                  <div className="n-item-total">
-                    <span style={{ color:"#777" }}>{it.quantidade ?? 1}x {fmt(Number(it.preco))}</span>
-                    <span style={{ fontWeight:700 }}>{fmt(Number(it.preco) * (it.quantidade ?? 1))}</span>
-                  </div>
+            <div className="n-sec">Serviços</div>
+            {itens.map((it: any, idx: number) => (
+              <div key={idx} className="n-item">
+                <div className="n-item-nome">{it.servico_nome}</div>
+                {it.descricao && <div className="n-item-desc field-desc">{it.descricao}</div>}
+                <div className="n-item-total">
+                  <span style={{ color:"#777" }}>{it.quantidade ?? 1}x {fmt(Number(it.preco))}</span>
+                  <span style={{ fontWeight:700 }}>{fmt(Number(it.preco) * (it.quantidade ?? 1))}</span>
                 </div>
-              ))}
-            </div>
-            {desconto > 0 && (
-              <div className="n-row" style={{ marginTop:6 }}>
-                <span className="n-label">Desconto</span>
-                <span className="n-val" style={{ color:"#c0392b" }}>− {fmt(desconto)}</span>
               </div>
-            )}
+            ))}
+            <hr className="n-divider" />
+            <div className="n-row"><span className="n-label">Subtotal</span><span className="n-val">{fmt(subtotal)}</span></div>
+            {desconto > 0 && <div className="n-row"><span className="n-label">Desconto</span><span className="n-val" style={{ color:"#c0392b" }}>− {fmt(desconto)}</span></div>}
             {o.observacoes && (
-              <div className="field-obs" style={{ margin:"8px 0", padding:"8px", background:"#fffbf0", borderRadius:4, fontSize:10, color:"#78350f", borderLeft:"3px solid #f59e0b" }}>
+              <div className="field-obs" style={{ margin:"8px 0", padding:"7px 10px", background:"#fffbf0", borderRadius:4, fontSize:10, color:"#78350f", borderLeft:"3px solid #f59e0b" }}>
                 <strong>Obs:</strong> {o.observacoes}
               </div>
             )}
           </div>
           <div className="n-total-box">
-            <span className="n-total-label">Total</span>
-            <span className="n-total-val">{fmt(total)}</span>
+            <span className="n-t-label">Total da venda</span>
+            <span className="n-t-val">{fmt(total)}</span>
           </div>
           <div className="n-footer">
-            {config?.whatsapp && <div>{config.whatsapp}</div>}
-            {config?.instagram && <div>{config.instagram}</div>}
-            <div style={{ marginTop:4 }}>Obrigado pela preferencia!</div>
+            {config?.whatsapp && <div>📱 {config.whatsapp}</div>}
+            {config?.instagram && <div>📸 {config.instagram}</div>}
+            <div style={{ marginTop:4 }}>Obrigado pela preferência!</div>
           </div>
         </div>
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: `
-        // Print A4
         document.getElementById('btn-a4').addEventListener('click', function(){
-          document.body.classList.remove('mode-notinha');
-          window.print();
+          document.body.classList.remove('mode-notinha'); window.print();
         });
-        // Print Notinha
         document.getElementById('btn-notinha').addEventListener('click', function(){
           document.body.classList.add('mode-notinha');
           window.print();
-          setTimeout(function(){ document.body.classList.remove('mode-notinha'); }, 1000);
+          setTimeout(function(){ document.body.classList.remove('mode-notinha'); }, 1500);
         });
-        // Copy link
         document.getElementById('btn-copy').addEventListener('click', function(){
-          navigator.clipboard.writeText(window.location.href).then(function(){
+          navigator.clipboard.writeText(window.location.href.split('?')[0]).then(function(){
             var b = document.getElementById('btn-copy');
-            b.textContent = 'Copiado!';
-            setTimeout(function(){ b.textContent = 'Copiar Link'; }, 2000);
+            b.textContent = '✓ Copiado!'; setTimeout(function(){ b.textContent = '📋 Copiar Link'; }, 2000);
           });
         });
-        // Dropdown toggle
         var btnSel = document.getElementById('btn-sel');
         var selDrop = document.getElementById('sel-dropdown');
         btnSel.addEventListener('click', function(e){ e.stopPropagation(); selDrop.classList.toggle('open'); });
         document.addEventListener('click', function(){ selDrop.classList.remove('open'); });
-        // Checkbox toggles
         function bindCheck(id, cls) {
           var el = document.getElementById(id);
           el.addEventListener('change', function(){
-            document.querySelectorAll('.' + cls).forEach(function(n){
-              n.classList.toggle('hidden', !el.checked);
-            });
+            document.querySelectorAll('.'+cls).forEach(function(n){ n.classList.toggle('hidden', !el.checked); });
           });
         }
-        bindCheck('chk-desc', 'field-desc');
-        bindCheck('chk-obs', 'field-obs');
-        bindCheck('chk-contact', 'field-contact');
-
-        // Auto-print via URL param (?print=a4 ou ?print=notinha)
-        var params = new URLSearchParams(window.location.search);
-        var printMode = params.get('print');
-        if (printMode) {
-          window.addEventListener('load', function() {
-            setTimeout(function() {
-              if (printMode === 'notinha') {
-                document.body.classList.add('mode-notinha');
-                window.print();
-                setTimeout(function(){ document.body.classList.remove('mode-notinha'); }, 1500);
-              } else {
-                document.body.classList.remove('mode-notinha');
-                window.print();
-              }
-            }, 600);
-          });
-        }
+        bindCheck('chk-desc','field-desc'); bindCheck('chk-obs','field-obs'); bindCheck('chk-contact','field-contact');
+        // Auto-print via ?print=a4|notinha
+        var p = new URLSearchParams(window.location.search).get('print');
+        if (p) window.addEventListener('load', function(){
+          setTimeout(function(){
+            if (p === 'notinha') { document.body.classList.add('mode-notinha'); window.print(); setTimeout(function(){ document.body.classList.remove('mode-notinha'); },1500); }
+            else window.print();
+          }, 600);
+        });
       `}} />
     </>
   );
