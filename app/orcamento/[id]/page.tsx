@@ -153,15 +153,17 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
 
         /* ── NOTINHA ── */
         .page-notinha { display:none }
+        .mode-notinha .page-a4    { display:none }
+        .mode-notinha .page-notinha { display:block !important }
         .notinha-wrap {
-          width:320px; margin:24px auto; background:#fff;
+          width:260px; margin:24px auto; background:#fff;
           border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5);
           font-family:"Courier New", monospace; font-size:12px; color:#000; overflow:hidden;
         }
         .n-top { background:#111; padding:16px; text-align:center }
         .n-top .n-logo { font-size:15px; font-weight:900; color:#fff; letter-spacing:1px }
         .n-top .n-sub  { font-size:10px; color:#888; margin-top:2px; text-transform:uppercase }
-        .n-body { padding:12px 14px }
+        .n-body { padding:10px 12px }
         .n-row  { display:flex; justify-content:space-between; margin:3px 0; font-size:11px }
         .n-label { color:#555; flex-shrink:0; margin-right:6px }
         .n-val   { font-weight:700; color:#111; text-align:right }
@@ -434,12 +436,17 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         bindCheck('chk-desc','field-desc'); bindCheck('chk-obs','field-obs'); bindCheck('chk-contact','field-contact');
         // Auto-print via ?print=a4|notinha
         var p = new URLSearchParams(window.location.search).get('print');
-        if (p) window.addEventListener('load', function(){
-          setTimeout(function(){
-            if (p === 'notinha') { document.body.classList.add('mode-notinha'); window.print(); setTimeout(function(){ document.body.classList.remove('mode-notinha'); },1500); }
-            else window.print();
-          }, 600);
-        });
+        if (p === 'notinha') {
+          // apply on-screen immediately so user sees notinha layout
+          document.body.classList.add('mode-notinha');
+          window.addEventListener('load', function(){
+            setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove('mode-notinha'); },1500); }, 400);
+          });
+        } else if (p === 'a4') {
+          window.addEventListener('load', function(){
+            setTimeout(function(){ window.print(); }, 400);
+          });
+        }
       `}} />
     </>
   );

@@ -78,6 +78,27 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
           <label className="label">Nome Fantasia</label>
           <input className="input" value={config.nome_fantasia ?? ""} onChange={e => set("nome_fantasia", e.target.value)} />
         </div>
+        <div className="field">
+          <label className="label">Logo da Empresa (URL da imagem)</label>
+          <input className="input" value={config.logo_url ?? ""} onChange={e => set("logo_url", e.target.value)} placeholder="https://..." />
+          {config.logo_url && (
+            <img src={config.logo_url} alt="Preview" style={{ height:56, marginTop:8, borderRadius:8, objectFit:"contain", border:"1px solid var(--border)", padding:4 }} />
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="field">
+            <label className="label">WhatsApp</label>
+            <input className="input" value={config.whatsapp ?? ""} onChange={e => set("whatsapp", e.target.value)} placeholder="(41) 99999-0000" />
+          </div>
+          <div className="field">
+            <label className="label">Instagram</label>
+            <input className="input" value={config.instagram ?? ""} onChange={e => set("instagram", e.target.value)} placeholder="@studio.rpm" />
+          </div>
+          <div className="field">
+            <label className="label">Cidade</label>
+            <input className="input" value={config.cidade ?? ""} onChange={e => set("cidade", e.target.value)} placeholder="Curitiba, PR" />
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="field">
             <label className="label">Vagas por Dia</label>
