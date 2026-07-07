@@ -94,46 +94,66 @@ function ModalNovoCliente({ onClose, onCreated }: { onClose:()=>void; onCreated:
   );
 }
 
-/* ── 3-dot menu ── */
+/* ── 3-dot menu — usa position:fixed para escapar de overflow:hidden ── */
 function MenuAcoes({ o, onExcluir, onAprovar, onWa }: { o:Orcamento; onExcluir:()=>void; onAprovar:()=>void; onWa:()=>void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top:0, right:0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    function handle(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    function handle(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          btnRef.current && !btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, []);
+
+  function handleOpen() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setOpen(x => !x);
+  }
+
+  const acoes = [
+    { label:"Visualizar",          icon:"👁", action:() => window.open(`/orcamento/${o.id}`,"_blank") },
+    { label:"Chamar no WhatsApp",  icon:"💬", action: onWa },
+    { label:"Aprovar",             icon:"✓",  action: onAprovar },
+    { label:"Cancelar",            icon:"✕",  action: onExcluir },
+  ];
+
   return (
-    <div ref={ref} style={{ position:"relative" }}>
-      <button onClick={() => setOpen(x=>!x)}
+    <>
+      <button ref={btnRef} onClick={handleOpen}
         style={{ width:32, height:32, borderRadius:8, border:"1px solid var(--border)",
           background:"var(--bg-card)", color:"var(--text-muted)", cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:700 }}>
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, flexShrink:0 }}>
         ⋮
       </button>
       {open && (
-        <div style={{ position:"absolute", right:0, top:"calc(100% + 4px)", zIndex:300,
+        <div ref={menuRef} style={{
+          position:"fixed", top:pos.top, right:pos.right, zIndex:9999,
           background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12,
-          boxShadow:"0 8px 32px rgba(0,0,0,0.2)", minWidth:190, overflow:"hidden" }}>
-          {[
-            { label:"Visualizar", icon:"👁", action:() => window.open(`/orcamento/${o.id}`,"_blank") },
-            { label:"Chamar no WhatsApp", icon:"💬", action: onWa },
-            { label:"Aprovar", icon:"✓", action: onAprovar },
-            { label:"Cancelar", icon:"✕", action: onExcluir },
-          ].map(item => (
+          boxShadow:"0 8px 32px rgba(0,0,0,0.25)", minWidth:200, overflow:"hidden",
+        }}>
+          {acoes.map(item => (
             <button key={item.label} onClick={() => { item.action(); setOpen(false); }}
-              style={{ display:"flex", alignItems:"center", gap:10, width:"100%", padding:"10px 14px",
+              style={{ display:"flex", alignItems:"center", gap:10, width:"100%", padding:"11px 16px",
                 background:"none", border:"none", cursor:"pointer", textAlign:"left",
                 fontSize:13, color: item.label === "Cancelar" ? "var(--danger)" : "var(--text)",
                 borderBottom:"1px solid var(--border)" }}
               onMouseOver={e => (e.currentTarget.style.background = "var(--bg)")}
               onMouseOut={e => (e.currentTarget.style.background = "none")}>
-              <span style={{ fontSize:15 }}>{item.icon}</span> {item.label}
+              <span style={{ fontSize:15, minWidth:18 }}>{item.icon}</span> {item.label}
             </button>
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
