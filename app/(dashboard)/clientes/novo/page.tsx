@@ -2,8 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import VeiculoForm, { VeiculoFormData } from "@/components/VeiculoForm";
 
-const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+const estadosBR = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
+const veiculoVazio: VeiculoFormData = {
+  placa: "", marca: "", modelo: "", ano: "", cor: "", km: "", categoria: "", tipo_veiculo: "carro", obs: ""
+};
 
 export default function NovoClientePage() {
   const router = useRouter();
@@ -12,11 +17,10 @@ export default function NovoClientePage() {
     nome: "", telefone: "", whatsapp: "", email: "", cpf: "", obs: "",
     endereco: "", cidade: "", estado: "", cep: ""
   });
-  const [veiculo, setVeiculo] = useState({ placa: "", modelo: "", marca: "", ano: "", cor: "" });
+  const [veiculo, setVeiculo] = useState<VeiculoFormData>(veiculoVazio);
   const [addVeiculo, setAddVeiculo] = useState(true);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
-  const setV = (k: string, v: string) => setVeiculo(f => ({ ...f, [k]: v }));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -27,10 +31,16 @@ export default function NovoClientePage() {
     });
     const json = await res.json();
     if (!json.id) { alert(json.error ?? "Erro ao salvar cliente"); setLoading(false); return; }
+
     if (addVeiculo && veiculo.placa) {
       await fetch("/api/veiculos", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...veiculo, cliente_id: json.id, ano: veiculo.ano ? parseInt(veiculo.ano) : null }),
+        body: JSON.stringify({
+          ...veiculo,
+          cliente_id: json.id,
+          ano: veiculo.ano ? parseInt(veiculo.ano) : null,
+          km: veiculo.km ? parseInt(veiculo.km) : null,
+        }),
       });
     }
     router.push(`/clientes/${json.id}`);
@@ -39,13 +49,11 @@ export default function NovoClientePage() {
   return (
     <div style={{ maxWidth: 680 }}>
       <div className="mb-6">
-        <Link href="/clientes" className="text-sm mb-2 block" style={{ color: "var(--text-muted)" }}>
-          Clientes
-        </Link>
+        <Link href="/clientes" className="text-sm mb-2 block" style={{ color: "var(--text-muted)" }}>← Clientes</Link>
         <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Novo Cliente</h1>
       </div>
-      <form onSubmit={save} className="flex flex-col gap-5">
 
+      <form onSubmit={save} className="flex flex-col gap-5">
         {/* Dados pessoais */}
         <div className="card flex flex-col gap-4">
           <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Dados do Cliente</h2>
@@ -56,11 +64,11 @@ export default function NovoClientePage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="field">
               <label className="label">Telefone</label>
-              <input className="input" value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(11) 99999-0000" />
+              <input className="input" value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(41) 99999-0000" />
             </div>
             <div className="field">
               <label className="label">WhatsApp</label>
-              <input className="input" value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(11) 99999-0000" />
+              <input className="input" value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(41) 99999-0000" />
             </div>
             <div className="field">
               <label className="label">E-mail</label>
@@ -72,73 +80,52 @@ export default function NovoClientePage() {
             </div>
           </div>
           <div className="field">
-            <label className="label">Observacoes</label>
-            <textarea className="input" rows={2} value={form.obs} onChange={e => set("obs", e.target.value)} placeholder="Anotacoes sobre o cliente..." />
+            <label className="label">Observações</label>
+            <textarea className="input" rows={2} value={form.obs} onChange={e => set("obs", e.target.value)} placeholder="Anotações sobre o cliente..." />
           </div>
         </div>
 
-        {/* Endereco */}
+        {/* Endereço */}
         <div className="card flex flex-col gap-4">
-          <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Endereco</h2>
+          <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Endereço (opcional)</h2>
           <div className="field">
-            <label className="label">Rua / Logradouro</label>
-            <input className="input" value={form.endereco} onChange={e => set("endereco", e.target.value)} placeholder="Rua das Flores, 123 - Apto 4" />
+            <label className="label">Endereço</label>
+            <input className="input" value={form.endereco} onChange={e => set("endereco", e.target.value)} placeholder="Rua, número, bairro" />
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="field col-span-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="field">
               <label className="label">Cidade</label>
-              <input className="input" value={form.cidade} onChange={e => set("cidade", e.target.value)} placeholder="Sao Paulo" />
+              <input className="input" value={form.cidade} onChange={e => set("cidade", e.target.value)} />
             </div>
             <div className="field">
               <label className="label">Estado</label>
               <select className="input" value={form.estado} onChange={e => set("estado", e.target.value)}>
-                <option value="">UF</option>
-                {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                <option value="">—</option>
+                {estadosBR.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-          </div>
-          <div className="field" style={{ maxWidth: 160 }}>
-            <label className="label">CEP</label>
-            <input className="input" value={form.cep} onChange={e => set("cep", e.target.value)} placeholder="00000-000" />
+            <div className="field">
+              <label className="label">CEP</label>
+              <input className="input" value={form.cep} onChange={e => set("cep", e.target.value)} placeholder="00000-000" />
+            </div>
           </div>
         </div>
 
-        {/* Veiculo */}
+        {/* Veículo */}
         <div className="card flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Veiculo</h2>
-            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--text-muted)" }}>
+            <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Veículo</h2>
+            <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: "var(--text)" }}>
               <input type="checkbox" checked={addVeiculo} onChange={e => setAddVeiculo(e.target.checked)} />
-              Adicionar veiculo
+              Adicionar veículo agora
             </label>
           </div>
           {addVeiculo && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="field">
-                <label className="label">Placa *</label>
-                <input className="input" value={veiculo.placa} onChange={e => setV("placa", e.target.value.toUpperCase())} placeholder="ABC1D23" />
-              </div>
-              <div className="field">
-                <label className="label">Modelo</label>
-                <input className="input" value={veiculo.modelo} onChange={e => setV("modelo", e.target.value)} placeholder="Civic, Gol, HB20..." />
-              </div>
-              <div className="field">
-                <label className="label">Marca</label>
-                <input className="input" value={veiculo.marca} onChange={e => setV("marca", e.target.value)} placeholder="Toyota, VW, Fiat..." />
-              </div>
-              <div className="field">
-                <label className="label">Ano</label>
-                <input className="input" type="number" value={veiculo.ano} onChange={e => setV("ano", e.target.value)} placeholder="2022" />
-              </div>
-              <div className="field col-span-2">
-                <label className="label">Cor</label>
-                <input className="input" value={veiculo.cor} onChange={e => setV("cor", e.target.value)} placeholder="Preto, Branco, Prata..." />
-              </div>
-            </div>
+            <VeiculoForm value={veiculo} onChange={setVeiculo} />
           )}
         </div>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-3 justify-end pb-8">
           <Link href="/clientes" className="btn btn-secondary">Cancelar</Link>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Salvando..." : "Salvar Cliente"}
