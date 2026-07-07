@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Studio RPM",
   description: "Sistema de Gestão para Estética Automotiva",
   manifest: "/manifest.json",
-  icons: { icon: "/favicon.svg", apple: "/icons/icon-192.png" },
+  icons: { icon: "/favicon.png", apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Studio RPM" },
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={inter.variable} data-theme="dark">
       <head>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body>
