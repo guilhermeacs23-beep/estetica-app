@@ -440,6 +440,24 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
         bindCheck('chk-desc', 'field-desc');
         bindCheck('chk-obs', 'field-obs');
         bindCheck('chk-contact', 'field-contact');
+
+        // Auto-print via URL param (?print=a4 ou ?print=notinha)
+        var params = new URLSearchParams(window.location.search);
+        var printMode = params.get('print');
+        if (printMode) {
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              if (printMode === 'notinha') {
+                document.body.classList.add('mode-notinha');
+                window.print();
+                setTimeout(function(){ document.body.classList.remove('mode-notinha'); }, 1500);
+              } else {
+                document.body.classList.remove('mode-notinha');
+                window.print();
+              }
+            }, 600);
+          });
+        }
       `}} />
     </>
   );

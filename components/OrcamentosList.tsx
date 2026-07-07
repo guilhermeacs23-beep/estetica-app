@@ -190,13 +190,23 @@ function DrawerOrcamento({ o, onClose, onAprovar, onExcluir, onWa }:
 
           {/* Comprovantes */}
           <div>
-            <p style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Comprovantes</p>
+            <p style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Comprovantes em PDF</p>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <a href={`/orcamento/${o.id}`} target="_blank" style={{
                 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                padding:"12px 16px", borderRadius:10, background:"var(--primary)", color:"#fff",
+                padding:"11px 16px", borderRadius:10, background:"var(--bg)", color:"var(--text)",
+                textDecoration:"none", fontWeight:600, fontSize:13, border:"1px solid var(--border)"
+              }}>👁 Visualizar orçamento</a>
+              <a href={`/orcamento/${o.id}?print=a4`} target="_blank" style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                padding:"11px 16px", borderRadius:10, background:"#c0392b", color:"#fff",
                 textDecoration:"none", fontWeight:700, fontSize:13
-              }}>📄 Visualizar / Imprimir</a>
+              }}>🖨️ Imprimir A4</a>
+              <a href={`/orcamento/${o.id}?print=notinha`} target="_blank" style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                padding:"11px 16px", borderRadius:10, background:"#1a6e3b", color:"#fff",
+                textDecoration:"none", fontWeight:700, fontSize:13
+              }}>🧾 Imprimir Notinha</a>
             </div>
           </div>
 
