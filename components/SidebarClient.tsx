@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV = [
   { href: "/dashboard",            label: "Dashboard",          icon: "D" },
@@ -77,6 +78,9 @@ export default function SidebarClient({ profile }: { profile: Record<string, unk
             {(profile?.tenants as Record<string, unknown>)?.nome as string}
           </p>
         )}
+        <div className="flex items-center justify-between mb-2">
+          <ThemeToggle />
+        </div>
         <button onClick={handleLogout} className="sidebar-link w-full" style={{ color: "var(--danger)" }}>
           <span style={{ fontSize: 13 }}>X</span>
           {!collapsed && <span>Sair</span>}
