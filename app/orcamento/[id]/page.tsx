@@ -6,7 +6,7 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
 
   const { data: o } = await supabaseAdmin
     .from("orcamentos")
-    .select("*, clientes(nome, telefone, whatsapp, email), orcamento_servicos(id, servico_nome, descricao, preco, quantidade)")
+    .select("*, clientes(nome, telefone, whatsapp, email), veiculos(placa, modelo, marca, ano, km), orcamento_servicos(id, servico_nome, descricao, preco, quantidade)")
     .eq("id", id)
     .single();
 
@@ -20,8 +20,10 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
 
   const nomeLoja    = config?.nome_fantasia ?? "Studio RPM";
   const nomeCliente = o.clientes?.nome ?? o.nome_avulso ?? "";
-  const placa       = o.placa_avulsa ?? "";
-  const modelo      = o.modelo_avulso ?? "";
+  const placa       = o.placa_avulsa ?? o.veiculos?.placa ?? "";
+  const modelo      = o.modelo_avulso ?? (o.veiculos ? `${o.veiculos.marca ?? ""} ${o.veiculos.modelo ?? ""}`.trim() : "");
+  const veicAnо     = o.veiculos?.ano ?? "";
+  const veicKm      = o.veiculos?.km ? `${Number(o.veiculos.km).toLocaleString("pt-BR")} km` : "";
   const itens: any[] = o.orcamento_servicos ?? [];
   const subtotal    = itens.reduce((s: number, i: any) => s + (Number(i.preco) * (i.quantidade ?? 1)), 0);
   const desconto    = Number(o.desconto ?? 0);
@@ -204,7 +206,7 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
           .page-notinha { display:none }
 
           body.mode-notinha .page-a4 { display:none }
-          body.mode-notinha .page-notinha { display:block }
+          body.mode-notinha .page-notinha { display:block !important }
           body.mode-notinha .notinha-wrap { margin:0; width:100%; border-radius:0; box-shadow:none }
           body.mode-notinha .notinha-top { -webkit-print-color-adjust:exact; print-color-adjust:exact }
           body.mode-notinha .n-total-box { -webkit-print-color-adjust:exact; print-color-adjust:exact }
@@ -275,7 +277,14 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
             <div className="info-card">
               <div className="ic-label">Veículo</div>
               {placa
-                ? <><div className="ic-placa">{placa}</div><div className="ic-modelo">{modelo || "—"}</div></>
+                ? <>
+                    <div className="ic-placa">{placa}</div>
+                    <div className="ic-modelo">{modelo || "—"}</div>
+                    <div className="ic-detail" style={{ marginTop:6 }}>
+                      {veicAnо && <span style={{ marginRight:12 }}>📅 {veicAnо}</span>}
+                      {veicKm && <span>🛣 {veicKm}</span>}
+                    </div>
+                  </>
                 : <div className="ic-detail" style={{ color:"#bbb" }}>Não informado</div>
               }
             </div>
@@ -335,7 +344,7 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
       </div>
 
       {/* NOTINHA PAGE */}
-      <div className="page-notinha" id="page-notinha" style={{ display:"none" }}>
+      <div className="page-notinha" id="page-notinha">
         <div className="notinha-wrap">
           <div className="notinha-top">
             <div className="n-logo">{nomeLoja}</div>
@@ -351,8 +360,12 @@ export default async function OrcamentoPreviewPage({ params }: { params: Promise
             <hr className="notinha-divider" />
             <div className="n-row field-contact"><span className="n-label">Cliente</span><span className="n-val">{nomeCliente || "—"}</span></div>
             {o.clientes?.whatsapp && <div className="n-row field-contact"><span className="n-label">WhatsApp</span><span className="n-val">{o.clientes.whatsapp}</span></div>}
-            {placa && <><div className="n-row"><span className="n-label">Placa</span><span className="n-val" style={{ color:"#c0392b", fontWeight:900 }}>{placa}</span></div>
-            {modelo && <div className="n-row"><span className="n-label">Modelo</span><span className="n-val">{modelo}</span></div>}</>}
+            {placa && <>
+              <div className="n-row"><span className="n-label">Placa</span><span className="n-val" style={{ color:"#c0392b", fontWeight:900 }}>{placa}</span></div>
+              {modelo && <div className="n-row"><span className="n-label">Veículo</span><span className="n-val">{modelo}</span></div>}
+              {veicAnо && <div className="n-row"><span className="n-label">Ano</span><span className="n-val">{veicAnо}</span></div>}
+              {veicKm && <div className="n-row"><span className="n-label">KM</span><span className="n-val">{veicKm}</span></div>}
+            </>}
             <div className="n-section-title">Serviços</div>
             <div id="n-servicos">
               {itens.map((it: any, idx: number) => (
