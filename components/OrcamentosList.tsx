@@ -25,7 +25,7 @@ interface Cliente { id: string; nome: string; telefone?: string; whatsapp?: stri
 interface Servico { id: string; nome: string; preco_base: number; descricao?: string; }
 interface Orcamento {
   id: string; numero?: number; status: string; valor_total: number; validade?: string;
-  created_at?: string; os_id?: string;
+  created_at?: string; os_id?: string; desconto?: number; observacoes?: string;
   clientes?: { nome: string; whatsapp?: string; telefone?: string };
   nome_avulso?: string; placa_avulsa?: string; modelo_avulso?: string;
   orcamento_servicos?: { servico_nome: string; descricao?: string; preco: number; quantidade: number }[];
@@ -97,6 +97,151 @@ function ModalNovoCliente({ onClose, onCreated }: { onClose:()=>void; onCreated:
 
 /* ── 3-dot menu — Portal fora da árvore DOM + flip inteligente ── */
 const MENU_HEIGHT = 192; // ~4 itens × 48px
+
+/* ── Drawer lateral de detalhe ── */
+function DrawerOrcamento({ o, onClose, onAprovar, onExcluir, onWa }:
+  { o: Orcamento; onClose:()=>void; onAprovar:()=>void; onExcluir:()=>void; onWa:()=>void }) {
+  const nome   = o.clientes?.nome ?? o.nome_avulso ?? "—";
+  const placa  = o.placa_avulsa ?? "";
+  const modelo = o.modelo_avulso ?? "";
+  const itens  = o.orcamento_servicos ?? [];
+  const subtotal = itens.reduce((s,i) => s + (Number(i.preco)||0)*(Number(i.quantidade)||1), 0);
+  const desconto = o.desconto ?? 0;
+  const total    = o.valor_total;
+  const data     = o.created_at ? new Date(o.created_at).toLocaleDateString("pt-BR") : "—";
+  const st       = ST[o.status] ?? ST.pendente;
+
+  // Fecha com Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <>
+      {/* Overlay */}
+      <div onClick={onClose} style={{
+        position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:8000,
+        animation:"fadeIn 0.2s ease"
+      }} />
+      {/* Painel */}
+      <div style={{
+        position:"fixed", top:0, right:0, bottom:0, width:400, maxWidth:"95vw",
+        background:"var(--bg-card)", borderLeft:"1px solid var(--border)",
+        zIndex:8001, display:"flex", flexDirection:"column",
+        boxShadow:"-8px 0 40px rgba(0,0,0,0.3)",
+        animation:"slideIn 0.25s ease"
+      }}>
+        {/* Header */}
+        <div style={{ padding:"20px 24px", borderBottom:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+              <span style={{ fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20,
+                color:st.color, background:st.bg }}>{st.label}</span>
+              <span style={{ fontSize:12, color:"var(--text-muted)" }}>Orçamento #{o.numero ?? "—"}</span>
+            </div>
+            <p style={{ fontSize:18, fontWeight:800, color:"var(--text)", margin:0 }}>{nome}</p>
+            {(placa || modelo) && (
+              <p style={{ fontSize:12, color:"var(--text-muted)", margin:0 }}>🚗 {placa} {modelo}</p>
+            )}
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:8, border:"1px solid var(--border)",
+            background:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:20, color:"var(--text-muted)" }}>×</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
+
+          {/* Resumo */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Resumo</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"var(--text-muted)" }}>
+                <span>⚙️ {itens.length} serviço{itens.length!==1?"s":""}</span>
+                <span>{data}</span>
+              </div>
+              {itens.map((it, i) => (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"6px 10px",
+                  background:"var(--bg)", borderRadius:8, border:"1px solid var(--border)" }}>
+                  <span style={{ color:"var(--text)" }}>{it.servico_nome} {it.quantidade>1 ? `×${it.quantidade}`:""}</span>
+                  <span style={{ color:"var(--primary)", fontWeight:600 }}>{fmt(Number(it.preco)*(Number(it.quantidade)||1))}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Valores */}
+          <div style={{ background:"var(--bg)", borderRadius:12, padding:"14px 16px", border:"1px solid var(--border)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"var(--text-muted)", marginBottom:6 }}>
+              <span>Subtotal</span><span>{fmt(subtotal)}</span>
+            </div>
+            {desconto > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"var(--danger)", marginBottom:6 }}>
+                <span>Desconto</span><span>− {fmt(desconto)}</span>
+              </div>
+            )}
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:16, fontWeight:800,
+              color:"var(--text)", paddingTop:8, borderTop:"1px solid var(--border)", marginTop:4 }}>
+              <span>Total</span><span style={{ color:"var(--primary)" }}>{fmt(total)}</span>
+            </div>
+          </div>
+
+          {/* Comprovantes */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Comprovantes</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <a href={`/orcamento/${o.id}`} target="_blank" style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                padding:"12px 16px", borderRadius:10, background:"var(--primary)", color:"#fff",
+                textDecoration:"none", fontWeight:700, fontSize:13
+              }}>📄 Visualizar / Imprimir</a>
+            </div>
+          </div>
+
+          {/* Mais opções */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Ações</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <button onClick={() => { onWa(); onClose(); }} style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                padding:"12px 16px", borderRadius:10, background:"#25d366", color:"#fff",
+                border:"none", cursor:"pointer", fontWeight:700, fontSize:13
+              }}>💬 Enviar WhatsApp</button>
+              {o.status !== "aprovado" && (
+                <button onClick={() => { onAprovar(); onClose(); }} style={{
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                  padding:"12px 16px", borderRadius:10, background:"var(--success)", color:"#fff",
+                  border:"none", cursor:"pointer", fontWeight:700, fontSize:13
+                }}>✓ Aprovar orçamento</button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:"16px 24px", borderTop:"1px solid var(--border)", display:"flex", gap:10 }}>
+          <button onClick={() => { onExcluir(); onClose(); }} style={{
+            flex:0, padding:"12px 16px", borderRadius:10, background:"rgba(239,68,68,0.1)",
+            color:"var(--danger)", border:"1px solid rgba(239,68,68,0.2)", cursor:"pointer", fontWeight:700, fontSize:13
+          }}>🗑 Cancelar</button>
+          <a href={`/orcamentos/${o.id}/editar`} style={{
+            flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            padding:"12px 16px", borderRadius:10, background:"var(--bg)", color:"var(--text)",
+            border:"1px solid var(--border)", textDecoration:"none", fontWeight:700, fontSize:13
+          }}>✏️ Editar</a>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+        @keyframes slideIn { from { transform:translateX(100%) } to { transform:translateX(0) } }
+      `}</style>
+    </>,
+    document.body
+  );
+}
 
 function MenuAcoes({ o, onExcluir, onAprovar, onWa }: { o:Orcamento; onExcluir:()=>void; onAprovar:()=>void; onWa:()=>void }) {
   const [open, setOpen] = useState(false);
@@ -208,6 +353,7 @@ export default function OrcamentosList({
 }: { orcamentos: Orcamento[]; clientes: Cliente[]; servicos: Servico[] }) {
   const [lista, setLista] = useState(inicial);
   const [view, setView] = useState<"dividido"|"agrupado">("dividido");
+  const [drawerOrc, setDrawerOrc] = useState<Orcamento|null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showModalCliente, setShowModalCliente] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -486,7 +632,8 @@ export default function OrcamentosList({
               const nItens = o.orcamento_servicos?.length ?? 0;
               const cor = CARD_BG[o.status] ?? "#9ca3af";
               return (
-                <div key={o.id} className="os-card" style={{ borderRadius:14, overflow:"hidden", border:"1px solid var(--border)",
+                <div key={o.id} className="os-card" onClick={() => setDrawerOrc(o)}
+                  style={{ borderRadius:14, overflow:"hidden", border:"1px solid var(--border)",
                   background:"var(--bg-card)", cursor:"pointer" }}>
                   {/* card header colorido */}
                   <div style={{ background:cor, padding:"14px 16px" }}>
@@ -514,7 +661,8 @@ export default function OrcamentosList({
                         <span style={{ fontSize:12, color:"var(--text-muted)" }}>{o.clientes.whatsapp}</span>
                       </div>
                     )}
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:4, paddingTop:8, borderTop:"1px solid var(--border)" }}>
+                    <div onClick={e=>e.stopPropagation()}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:4, paddingTop:8, borderTop:"1px solid var(--border)" }}>
                       <span className={`badge ${o.status==="aprovado"?"badge-finalizado":o.status==="recusado"?"badge-recusado":"badge-aguardando"}`} style={{ fontSize:10 }}>
                         {ST[o.status]?.label??o.status}
                       </span>
@@ -562,7 +710,8 @@ export default function OrcamentosList({
                         const nItens = o.orcamento_servicos?.length ?? 0;
                         const st = ST[o.status] ?? ST.pendente;
                         return (
-                          <tr key={o.id} style={{ borderBottom:"1px solid var(--border)", background:st.gradient }}>
+                          <tr key={o.id} onClick={() => setDrawerOrc(o)}
+                            style={{ borderBottom:"1px solid var(--border)", background:st.gradient, cursor:"pointer" }}>
                             <td style={{ padding:"12px 14px", fontWeight:700, color:"var(--text-muted)", fontSize:13 }}>#{o.numero}</td>
                             <td style={{ padding:"12px 14px", fontWeight:500, color:"var(--text)" }}>{nome}</td>
                             <td style={{ padding:"12px 14px", fontWeight:700, color:"var(--primary)" }}>{fmt(o.valor_total)}</td>
@@ -572,7 +721,7 @@ export default function OrcamentosList({
                               <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20,
                                 color:st.color, background:st.bg }}>{st.label}</span>
                             </td>
-                            <td style={{ padding:"12px 14px" }}>
+                            <td onClick={e=>e.stopPropagation()} style={{ padding:"12px 14px" }}>
                               <MenuAcoes o={o} onExcluir={()=>excluir(o.id)} onAprovar={()=>aprovar(o.id)} onWa={()=>abrirWa(o)} />
                             </td>
                           </tr>
@@ -586,6 +735,17 @@ export default function OrcamentosList({
           </div>
         )}
       </div>
+
+      {/* Drawer de detalhe */}
+      {drawerOrc && (
+        <DrawerOrcamento
+          o={drawerOrc}
+          onClose={() => setDrawerOrc(null)}
+          onAprovar={() => { aprovar(drawerOrc.id); setDrawerOrc(null); }}
+          onExcluir={() => { excluir(drawerOrc.id); setDrawerOrc(null); }}
+          onWa={() => abrirWa(drawerOrc)}
+        />
+      )}
     </div>
   );
 }
