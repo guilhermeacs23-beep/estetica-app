@@ -105,7 +105,9 @@ export default function WhatsAppConfig() {
         const ok = await checkStatus();
         if (ok) { clearInterval(interval); setQrCode(null); setPolling(false); }
       }, 4000);
-      setTimeout(() => { clearInterval(interval); setPolling(false); }, 120000);
+      // Libera o botão após mostrar QR (não fica preso em 'Aguardando')
+      setTimeout(() => setPolling(false), 3000);
+      setTimeout(() => { clearInterval(interval); }, 120000);
     } catch { setPolling(false); setStatus("error"); }
   }
 
@@ -172,6 +174,11 @@ export default function WhatsAppConfig() {
               <img src={qrCode.startsWith("data:") ? qrCode : ("data:image/png;base64," + qrCode)}
                 alt="QR Code" style={{ width:220, height:220, borderRadius:8 }} />
             )}
+            <div className="flex gap-2">
+              <button onClick={conectar} className="btn btn-secondary" style={{ fontSize:12 }}>
+                Gerar novo QR
+              </button>
+            </div>
             <p className="text-xs text-center" style={{ color:"var(--text-muted)" }}>
               WhatsApp &rarr; Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo
             </p>
