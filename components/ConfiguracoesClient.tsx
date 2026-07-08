@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import WhatsAppConfig from "@/components/WhatsAppConfig";
 
 const CORES = [
   { label: "Crimson (padrão)", hex: "#C41E3A" },
@@ -67,8 +68,22 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
     <div className="card text-center py-12"><p style={{ color:"var(--text-muted)" }}>Apenas o owner pode acessar as configurações.</p></div>
   );
 
+  const [aba, setAba] = useState<"config"|"whatsapp">("config");
+
   return (
-    <div className="max-w-xl flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
+      {/* Abas */}
+      <div className="flex gap-2" style={{ borderBottom:"1px solid var(--border)", paddingBottom:0 }}>
+        {([["config","⚙️ Configurações"],["whatsapp","💬 WhatsApp"]] as const).map(([key,label])=>(
+          <button key={key} onClick={()=>setAba(key)}
+            style={{ padding:"10px 20px", fontSize:13, fontWeight:600, border:"none", cursor:"pointer", borderBottom: aba===key ? "2px solid var(--primary)" : "2px solid transparent", color: aba===key ? "var(--primary)" : "var(--text-muted)", background:"none" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {aba === "whatsapp" && <WhatsAppConfig />}
+      {aba === "config" && <div className="max-w-xl flex flex-col gap-6">
       <h1 className="text-2xl font-bold" style={{ color:"var(--text)" }}>Configurações</h1>
 
       {/* Dados da estética */}
@@ -227,5 +242,6 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
         )}
       </div>
     </div>
-  );
+      </div>
+    );
 }
