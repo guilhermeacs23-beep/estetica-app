@@ -220,10 +220,14 @@ export default function WhatsAppConfig() {
               <div key={g.key} className="rounded-xl overflow-hidden"
                 style={{ border:"1px solid var(--border)", background:"var(--bg)" }}>
 
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={{ cursor:"pointer" }}
+                  onClick={() => setOpenKey(aberto ? null : g.key)}
+                >
                   {/* Toggle switch */}
                   <button
-                    onClick={() => setToggles(t => ({ ...t, [g.key]: !t[g.key] }))}
+                    onClick={e => { e.stopPropagation(); setToggles(t => ({ ...t, [g.key]: !t[g.key] })); }}
                     style={{
                       width:42, height:24, borderRadius:12, border:"none", cursor:"pointer", flexShrink:0,
                       background: ativo ? "var(--primary)" : "var(--border)", position:"relative", transition:"background 0.2s",
@@ -246,13 +250,9 @@ export default function WhatsAppConfig() {
                     <p className="text-xs" style={{ color:"var(--text-muted)" }}>{g.desc}</p>
                   </div>
 
-                  <button
-                    onClick={() => setOpenKey(aberto ? null : g.key)}
-                    style={{ fontSize:11, color:"var(--primary)", background:"none",
-                      border:"1px solid var(--border)", borderRadius:6, padding:"4px 10px",
-                      cursor:"pointer", flexShrink:0, fontWeight:600 }}>
+                  <span style={{ fontSize:11, color:"var(--primary)", fontWeight:600, flexShrink:0 }}>
                     {aberto ? "Fechar" : "Editar texto"}
-                  </button>
+                  </span>
                 </div>
 
                 {/* Editor de mensagem */}
