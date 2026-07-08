@@ -18,30 +18,48 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from("configuracoes").select("cor_primaria, onboarding_completo, logo_url, nome_fantasia").eq("tenant_id", profile!.tenant_id).single();
   const corPrimaria = config?.cor_primaria ?? "#c0392b";
   const onboardingOk = config?.onboarding_completo ?? false;
+  const clienteLogo = config?.logo_url ?? "/logo.png";
+  const nomeLoja = config?.nome_fantasia ?? "Studio RPM";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)", ["--primary" as any]: corPrimaria }}>
       {!onboardingOk && profile?.role === "owner" && <OnboardingWizard tenantId={profile.tenant_id} />}
-      <SidebarClient profile={profile} logoUrl={config?.logo_url ?? null} nomeLoja={config?.nome_fantasia ?? null} />
+      <SidebarClient profile={profile} logoUrl={null} nomeLoja={nomeLoja} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 flex items-center justify-between px-6 border-b" style={{ borderColor: "var(--border)", background: "var(--bg-sidebar)" }}>
+        <header className="h-14 flex items-center gap-4 px-6 border-b"
+          style={{ borderColor: "var(--border)", background: "var(--bg-sidebar)" }}>
+
+          {/* LEFT — logo da Valora (agência) */}
+          <Image
+            src="/valora-logo.png"
+            alt="Valora"
+            width={120}
+            height={36}
+            style={{ height: 32, width: "auto", objectFit: "contain" }}
+            priority
+          />
+
+          <div style={{ width: 1, height: 22, background: "var(--border)", flexShrink: 0 }} />
           <MobileHeader />
+
           <div className="flex-1" />
-          <div className="flex items-center gap-4">
-            <Image
-              src="/valora-logo.png"
-              alt="Valora"
-              width={100}
-              height={32}
-              style={{ height: 30, width: "auto", objectFit: "contain", opacity: 0.85 }}
-              priority
+
+          {/* RIGHT — logo do cliente + controles */}
+          <div className="flex items-center gap-3">
+            <img
+              src={clienteLogo}
+              alt={nomeLoja}
+              style={{ height: 30, width: "auto", objectFit: "contain", maxWidth: 130,
+                opacity: 0.9, borderRadius: 4 }}
             />
+            <div style={{ width: 1, height: 22, background: "var(--border)", flexShrink: 0 }} />
             <ThemeToggle />
             <div className="text-right hidden sm:block">
               <p className="text-xs font-medium" style={{ color: "var(--text)" }}>{profile?.nome}</p>
               <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>{profile?.role}</p>
             </div>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm text-white" style={{ background: "var(--primary)" }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm text-white"
+              style={{ background: "var(--primary)" }}>
               {profile?.nome?.[0]?.toUpperCase() ?? "U"}
             </div>
           </div>
