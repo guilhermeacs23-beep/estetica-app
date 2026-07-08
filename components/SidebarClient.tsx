@@ -88,4 +88,9 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
         )}
         <button onClick={handleLogout} className="sidebar-link w-full" style={{ color: "var(--danger)" }}>
           <span style={{ fontSize: 13 }}>X</span>
-          {!collap
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}
