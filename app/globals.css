@@ -466,9 +466,18 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 /* ── Chat WhatsApp Background ─────────────────────────── */
 .chat-bg {
   background-color: #ece5dd;
+  background-image: url("/chat-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 [data-theme="dark"] .chat-bg {
   background-color: #0f1923;
+  background-image: url("/chat-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: luminosity;
 }
 .msg-received {
   background: #ffffff;

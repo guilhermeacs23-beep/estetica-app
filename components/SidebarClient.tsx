@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +45,18 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.getAttribute("data-theme") !== "light");
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+
+  // Logo Valora: tema claro = letras escuras (brightness 0), tema escuro = original
+  const logoFilter = isDark ? "none" : "brightness(0) opacity(0.85)";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -59,25 +71,21 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
       style={{ width: collapsed ? 60 : 220, minWidth: collapsed ? 60 : 220,
         background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
-      {/* Logo Valora no topo */}
       <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
         <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0"
           style={{ textDecoration: "none" }} title="Dashboard">
           {collapsed ? (
             <div className="rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ width:36, height:36, background:"#0f172a", overflow:"hidden", borderRadius:8 }}>
-              <Image src="/valora-logo.png" alt="V" width={32} height={32}
-                style={{ width:32, height:32, objectFit:"contain" }} />
+              style={{ width:36, height:36, overflow:"hidden" }}>
+              <Image src="/valora-logo.png" alt="V" width={36} height={36}
+                style={{ width:36, height:36, objectFit:"contain", filter: logoFilter }} />
             </div>
           ) : (
-            <div style={{ background:"#0f172a", borderRadius:8, padding:"4px 10px",
-              display:"flex", alignItems:"center", justifyContent:"center", height:40, maxWidth:150 }}>
-              <Image src="/valora-logo.png" alt="Valora"
-                width={130} height={32}
-                style={{ height:30, width:"auto", objectFit:"contain", filter:"brightness(1.1)" }}
-                priority
-              />
-            </div>
+            <Image src="/valora-logo.png" alt="Valora"
+              width={148} height={40}
+              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148, filter: logoFilter }}
+              priority
+            />
           )}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0"

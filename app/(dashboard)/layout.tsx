@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <img
               src={clienteLogo}
               alt={nomeLoja}
-              style={{ height: 40, width: "auto", objectFit: "contain", maxWidth: 160 }}
+              style={{ height: 52, width: "auto", objectFit: "contain", maxWidth: 200 }}
             />
             <div style={{ width: 1, height: 22, background: "var(--border)", flexShrink: 0 }} />
             <ThemeToggle />
