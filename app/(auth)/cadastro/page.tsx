@@ -9,7 +9,7 @@ export default function CadastroPage() {
   const [erro, setErro] = useState("");
   const [showSenha, setShowSenha] = useState(false);
   const [form, setForm] = useState({
-    nomeResponsavel: "", email: "", senha: "", telefone: "",
+    nomeResponsavel: "", email: "", senha: "", telefone: "", codigoAcesso: "",
   });
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
@@ -54,6 +54,15 @@ export default function CadastroPage() {
               {showSenha ? "🙈" : "👁"}
             </button>
           </div>
+        </div>
+
+        <div className="field">
+          <label className="label">Código de acesso *</label>
+          <input className="input" value={form.codigoAcesso} onChange={e => set("codigoAcesso", e.target.value)}
+            placeholder="Informe o código fornecido pela Valora" required />
+          <p style={{ fontSize:11, color:"var(--text-muted)", marginTop:4 }}>
+            Solicite seu código em valora.com.br
+          </p>
         </div>
 
         {erro && <p className="text-sm" style={{ color: "var(--danger)" }}>{erro}</p>}

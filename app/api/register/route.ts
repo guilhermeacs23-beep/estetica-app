@@ -8,10 +8,15 @@ function slugify(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nomeEstetica, nomeResponsavel, email, senha, telefone } = await req.json();
+    const { nomeEstetica, nomeResponsavel, email, senha, telefone, codigoAcesso } = await req.json();
     const nomeEstética = nomeEstetica || nomeResponsavel || email.split("@")[0];
     if (!email || !senha || !nomeResponsavel)
       return NextResponse.json({ error: "Campos obrigatórios faltando." }, { status: 400 });
+
+    // Validar código de acesso
+    const codigoValido = process.env.REGISTRATION_CODE;
+    if (codigoValido && codigoAcesso !== codigoValido)
+      return NextResponse.json({ error: "Código de acesso inválido. Solicite o acesso em valora.com.br" }, { status: 403 });
 
     // 1. Criar usuário no Auth
     const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
