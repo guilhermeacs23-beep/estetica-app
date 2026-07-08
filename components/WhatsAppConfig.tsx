@@ -50,6 +50,7 @@ export default function WhatsAppConfig() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string|null>(null);
   const [openKey, setOpenKey] = useState<string|null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
 
   const [toggles, setToggles] = useState<Toggles>({
     wpp_os_criada: false, wpp_os_execucao: false, wpp_os_finalizada: true,
@@ -91,8 +92,7 @@ export default function WhatsAppConfig() {
     }).catch(() => {});
   }, [checkStatus]);
 
-  async function conectar() {
-    setQrCode(null); setPolling(true);
+  async function gerarQR() {
     try {
       const r = await fetch("/api/whatsapp?action=qrcode");
       const d = await r.json();
@@ -101,14 +101,50 @@ export default function WhatsAppConfig() {
       } else {
         setQrCode("debug:" + JSON.stringify(d).slice(0, 300));
       }
-      const interval = setInterval(async () => {
-        const ok = await checkStatus();
-        if (ok) { clearInterval(interval); setQrCode(null); setPolling(false); }
-      }, 4000);
-      // Libera o botão após mostrar QR (não fica preso em 'Aguardando')
-      setTimeout(() => setPolling(false), 3000);
-      setTimeout(() => { clearInterval(interval); }, 120000);
-    } catch { setPolling(false); setStatus("error"); }
+    } catch { /* silencioso */ }
+  }
+
+  async function conectar() {
+    setQrCode(null); setPolling(true);
+    await gerarQR();
+    setPolling(false);
+
+    // Auto-refresh do QR a cada 28s por 2 minutos
+    let elapsed = 0;
+    setCountdown(28);
+    const tick = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          elapsed += 28;
+          if (elapsed >= 120) {
+            clearInterval(tick);
+            setCountdown(0);
+            return 0;
+          }
+          // Gerar novo QR
+          gerarQR();
+          return 28;
+        }
+        return c - 1;
+      });
+    }, 1000);
+
+    // Polling de status a cada 4s
+    const statusPoll = setInterval(async () => {
+      const ok = await checkStatus();
+      if (ok) {
+        clearInterval(tick);
+        clearInterval(statusPoll);
+        setQrCode(null);
+        setCountdown(0);
+      }
+    }, 4000);
+
+    setTimeout(() => {
+      clearInterval(tick);
+      clearInterval(statusPoll);
+      setCountdown(0);
+    }, 130000);
   }
 
   async function enviarTeste() {
@@ -174,11 +210,11 @@ export default function WhatsAppConfig() {
               <img src={qrCode.startsWith("data:") ? qrCode : ("data:image/png;base64," + qrCode)}
                 alt="QR Code" style={{ width:220, height:220, borderRadius:8 }} />
             )}
-            <div className="flex gap-2">
-              <button onClick={conectar} className="btn btn-secondary" style={{ fontSize:12 }}>
-                Gerar novo QR
-              </button>
-            </div>
+            {countdown > 0 && (
+              <p className="text-xs" style={{ color:"var(--text-muted)" }}>
+                Novo QR em <strong>{countdown}s</strong>
+              </p>
+            )}
             <p className="text-xs text-center" style={{ color:"var(--text-muted)" }}>
               WhatsApp &rarr; Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo
             </p>
