@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === "setup-webhook") {
-    const origin = req.nextUrl.origin;
+    const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     const webhookUrl = `${origin}/api/whatsapp/webhook`;
     try {
       await evo(`/webhook/set/${INSTANCE}`, "PUT", {
@@ -94,14 +94,35 @@ export async function POST(req: NextRequest) {
   const tel = telefone.replace(/\D/g, "");
   const numero = tel.startsWith("55") ? tel : `55${tel}`;
 
+  // Buscar tenant
+  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user.id).single();
+  const tenantId = profile?.tenant_id;
+
   try {
     const data = await evo(`/message/sendText/${INSTANCE}`, "POST", {
       number: numero,
       text: mensagem,
     });
     const ok = !data?.error && (typeof data?.message !== "string" || !data.message.includes("error"));
+
+    // Logar no inbox
+    if (ok && tenantId) {
+      // Tentar identificar nome do contato
+      const { data: cli } = await supabaseAdmin.from("clientes").select("nome")
+        .eq("tenant_id", tenantId).ilike("whatsapp", "%" + numero.slice(-9)).maybeSingle();
+      await supabaseAdmin.from("whatsapp_inbox").insert({
+        tenant_id: tenantId,
+        numero,
+        nome_contato: cli?.nome ?? null,
+        mensagem,
+        tipo: "enviada",
+        lida: true,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     return NextResponse.json({ ok, data });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
