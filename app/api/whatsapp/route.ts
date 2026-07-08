@@ -64,6 +64,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  if (action === "setup-webhook") {
+    const origin = req.nextUrl.origin;
+    const webhookUrl = `${origin}/api/whatsapp/webhook`;
+    try {
+      await evo(`/webhook/set/${INSTANCE}`, "PUT", {
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: ["MESSAGES_UPSERT"],
+      });
+      return NextResponse.json({ ok: true, webhookUrl });
+    } catch (e: any) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ error: "action invalida" }, { status: 400 });
 }
 
