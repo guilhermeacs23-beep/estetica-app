@@ -1,5 +1,4 @@
 "use client";
-import WhatsAppConversas from "@/components/WhatsAppConversas";
 import { useState, useEffect, useCallback } from "react";
 
 type Toggles = {
@@ -51,7 +50,6 @@ export default function WhatsAppConfig() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string|null>(null);
   const [openKey, setOpenKey] = useState<string|null>(null);
-  const [aba, setAba] = useState<"config"|"conversas">("config");
   const [countdown, setCountdown] = useState<number>(0);
 
   const [toggles, setToggles] = useState<Toggles>({
@@ -183,21 +181,8 @@ export default function WhatsAppConfig() {
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Tabs internas */}
-      <div style={{ display:"flex", gap:4, borderBottom:"1px solid var(--border)" }}>
-        {([ ["config","Configuracao"], ["conversas","Conversas"] ] as const).map(([k,l]) => (
-          <button key={k} onClick={() => setAba(k)}
-            style={{ padding:"8px 16px", fontSize:13, fontWeight:600, border:"none", cursor:"pointer", background:"none",
-              borderBottom: aba===k ? "2px solid var(--primary)" : "2px solid transparent",
-              color: aba===k ? "var(--primary)" : "var(--text-muted)" }}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {aba === "conversas" && <WhatsAppConversas />}
-
-      {aba === "config" && <>
+      {/* Configuracao WhatsApp */}
+      <>
 
       {/* Status / QR */}
       <div className="card flex flex-col gap-4">
@@ -387,7 +372,7 @@ export default function WhatsAppConfig() {
           As automacoes so disparam se o WhatsApp estiver conectado. O Recap e processado diariamente as 8h (Brasilia).
         </div>
       </div>
-      </>}
+      </>
     </div>
   );
 }

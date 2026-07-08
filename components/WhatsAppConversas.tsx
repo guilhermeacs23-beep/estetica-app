@@ -23,6 +23,41 @@ function avatar(nome: string) {
   return nome.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
 }
 
+// Fundo estilo WhatsApp: tiles/pattern sutil
+const CHAT_BG: React.CSSProperties = {
+  flex: 1,
+  overflowY: "auto",
+  padding: "20px 24px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  backgroundColor: "#0f1923",
+  backgroundImage: [
+    "radial-gradient(ellipse 70% 50% at 5% 5%, rgba(196,30,58,0.10) 0%, transparent 55%)",
+    "radial-gradient(ellipse 60% 60% at 95% 95%, rgba(59,130,246,0.09) 0%, transparent 55%)",
+    "radial-gradient(ellipse 45% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 60%)",
+    "radial-gradient(circle at 80% 20%, rgba(196,30,58,0.06) 0%, transparent 30%)",
+    "radial-gradient(circle at 20% 80%, rgba(59,130,246,0.06) 0%, transparent 30%)",
+  ].join(", "),
+};
+
+const EMPTY_BG: React.CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 16,
+  backgroundColor: "#0f1923",
+  backgroundImage: [
+    "radial-gradient(ellipse 70% 50% at 5% 5%, rgba(196,30,58,0.10) 0%, transparent 55%)",
+    "radial-gradient(ellipse 60% 60% at 95% 95%, rgba(59,130,246,0.09) 0%, transparent 55%)",
+    "radial-gradient(ellipse 45% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 60%)",
+    "radial-gradient(circle at 80% 20%, rgba(196,30,58,0.06) 0%, transparent 30%)",
+    "radial-gradient(circle at 20% 80%, rgba(59,130,246,0.06) 0%, transparent 30%)",
+  ].join(", "),
+};
+
 export default function WhatsAppConversas() {
   const [conversas, setConversas] = useState<Conv[]>([]);
   const [sel, setSel] = useState<string | null>(null);
@@ -102,11 +137,10 @@ export default function WhatsAppConversas() {
     c.numero.includes(busca)
   );
 
-  // Agrupar mensagens por data
-  function groupByDate(msgs: Msg[]) {
+  function groupByDate(ms: Msg[]) {
     const groups: { date: string; msgs: Msg[] }[] = [];
     let lastDate = "";
-    for (const m of msgs) {
+    for (const m of ms) {
       const d = new Date(m.timestamp).toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" });
       if (d !== lastDate) { groups.push({ date: d, msgs: [] }); lastDate = d; }
       groups[groups.length - 1].msgs.push(m);
@@ -117,8 +151,9 @@ export default function WhatsAppConversas() {
   return (
     <div style={{
       display: "flex", height: 620, borderRadius: 16, overflow: "hidden",
-      border: "1px solid var(--border)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+      border: "1px solid var(--border)", boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
     }}>
+
       {/* ── LISTA DE CONVERSAS ── */}
       <div style={{ width: 280, display: "flex", flexDirection: "column", background: "var(--bg-sidebar)", borderRight: "1px solid var(--border)" }}>
         {/* Header */}
@@ -152,53 +187,66 @@ export default function WhatsAppConversas() {
               </p>
             </div>
           )}
-          {filtradas.map(c => (
-            <div key={c.numero} onClick={() => abrirConversa(c.numero)} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-              cursor: "pointer", transition: "background 0.15s",
-              background: sel === c.numero ? "rgba(var(--primary-rgb,196,30,58),0.07)" : "transparent",
-              borderLeft: sel === c.numero ? "3px solid var(--primary)" : "3px solid transparent",
-              borderBottom: "1px solid var(--border)",
-            }}>
-              {/* Avatar */}
-              <div style={{
-                width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
-                background: sel === c.numero ? "var(--primary)" : "var(--surface)",
-                border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 700,
-                color: sel === c.numero ? "#fff" : "var(--primary)",
-                transition: "all 0.2s",
+          {filtradas.map(c => {
+            const ativo = sel === c.numero;
+            return (
+              <div key={c.numero} onClick={() => abrirConversa(c.numero)} style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                cursor: "pointer", transition: "background 0.15s",
+                background: ativo ? "var(--primary)" : "transparent",
+                borderBottom: "1px solid var(--border)",
               }}>
-                {avatar(c.nome)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                  <span style={{ fontSize: 13, fontWeight: c.naoLidas > 0 ? 700 : 600, color: "var(--text)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                    {c.nome}
-                  </span>
-                  <span style={{ fontSize: 10, color: c.naoLidas > 0 ? "var(--primary)" : "var(--text-muted)", flexShrink: 0, marginLeft: 6 }}>
-                    {fmtData(c.timestamp)}
-                  </span>
+                {/* Avatar */}
+                <div style={{
+                  width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                  background: ativo ? "rgba(255,255,255,0.2)" : "var(--surface)",
+                  border: ativo ? "1.5px solid rgba(255,255,255,0.35)" : "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, fontWeight: 700,
+                  color: ativo ? "#fff" : "var(--primary)",
+                  transition: "all 0.2s",
+                }}>
+                  {avatar(c.nome)}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden",
-                    textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, margin: 0 }}>
-                    {c.ultimaMensagem}
-                  </p>
-                  {c.naoLidas > 0 && (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                     <span style={{
-                      background: "var(--primary)", color: "#fff", borderRadius: "50%",
-                      minWidth: 18, height: 18, padding: "0 4px", fontSize: 10,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontWeight: 700, flexShrink: 0,
-                    }}>{c.naoLidas}</span>
-                  )}
+                      fontSize: 13, fontWeight: c.naoLidas > 0 ? 700 : 600,
+                      color: ativo ? "#fff" : "var(--text)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                    }}>
+                      {c.nome}
+                    </span>
+                    <span style={{ fontSize: 10, color: ativo ? "rgba(255,255,255,0.75)" : (c.naoLidas > 0 ? "var(--primary)" : "var(--text-muted)"), flexShrink: 0, marginLeft: 6 }}>
+                      {fmtData(c.timestamp)}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <p style={{ fontSize: 11, color: ativo ? "rgba(255,255,255,0.75)" : "var(--text-muted)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, margin: 0 }}>
+                      {c.ultimaMensagem}
+                    </p>
+                    {c.naoLidas > 0 && !ativo && (
+                      <span style={{
+                        background: "var(--primary)", color: "#fff", borderRadius: "50%",
+                        minWidth: 18, height: 18, padding: "0 4px", fontSize: 10,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 700, flexShrink: 0,
+                      }}>{c.naoLidas}</span>
+                    )}
+                    {c.naoLidas > 0 && ativo && (
+                      <span style={{
+                        background: "rgba(255,255,255,0.25)", color: "#fff", borderRadius: "50%",
+                        minWidth: 18, height: 18, padding: "0 4px", fontSize: 10,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 700, flexShrink: 0,
+                      }}>{c.naoLidas}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -225,26 +273,22 @@ export default function WhatsAppConversas() {
             </div>
           </div>
 
-          {/* Fundo gradiente + mensagens */}
-          <div style={{
-            flex: 1, overflowY: "auto", padding: "20px 24px",
-            display: "flex", flexDirection: "column", gap: 4,
-            background: "linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 30%, #1a1a2e 70%, #0f0f2d 100%)",
-            backgroundAttachment: "fixed",
-          }}>
+          {/* Fundo + mensagens */}
+          <div style={CHAT_BG}>
             {groupByDate(msgs).map(group => (
               <div key={group.date}>
                 {/* Separador de data */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0 12px" }}>
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
                   <span style={{
-                    fontSize: 11, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.08)",
+                    fontSize: 11, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.07)",
                     padding: "3px 12px", borderRadius: 20, whiteSpace: "nowrap",
-                    textTransform: "capitalize",
+                    textTransform: "capitalize", backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.08)",
                   }}>
                     {group.date}
                   </span>
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -261,16 +305,16 @@ export default function WhatsAppConversas() {
                           borderRadius: enviada ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                           background: enviada
                             ? "var(--primary)"
-                            : "rgba(255,255,255,0.12)",
-                          backdropFilter: enviada ? "none" : "blur(10px)",
-                          border: enviada ? "none" : "1px solid rgba(255,255,255,0.15)",
+                            : "rgba(255,255,255,0.10)",
+                          backdropFilter: enviada ? "none" : "blur(12px)",
+                          border: enviada ? "none" : "1px solid rgba(255,255,255,0.12)",
                           color: "#fff",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                          boxShadow: enviada ? "0 2px 12px rgba(196,30,58,0.25)" : "0 2px 8px rgba(0,0,0,0.25)",
                         }}>
                           <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, wordBreak: "break-word" }}>
                             {m.mensagem}
                           </p>
-                          <p style={{ margin: "4px 0 0", fontSize: 10, opacity: 0.65, textAlign: "right" }}>
+                          <p style={{ margin: "4px 0 0", fontSize: 10, opacity: 0.6, textAlign: "right" }}>
                             {fmtHora(m.timestamp)}
                             {enviada && " ✓"}
                           </p>
@@ -283,7 +327,7 @@ export default function WhatsAppConversas() {
             ))}
             {msgs.length === 0 && (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Nenhuma mensagem ainda</p>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 13 }}>Nenhuma mensagem ainda</p>
               </div>
             )}
             <div ref={bottomRef} />
@@ -313,24 +357,20 @@ export default function WhatsAppConversas() {
           </div>
         </div>
       ) : (
-        /* Estado vazio — fundo gradiente + mensagem central */
-        <div style={{
-          flex: 1,
-          background: "linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 30%, #1a1a2e 70%, #0f0f2d 100%)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16,
-        }}>
+        /* Estado vazio */
+        <div style={EMPTY_BG}>
           <div style={{
             width: 80, height: 80, borderRadius: "50%",
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36,
           }}>
             💬
           </div>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.8)", margin: "0 0 6px" }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.75)", margin: "0 0 6px" }}>
               Suas mensagens
             </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0 }}>
               Selecione uma conversa para começar
             </p>
           </div>

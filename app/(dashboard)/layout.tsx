@@ -5,6 +5,7 @@ import SidebarClient from "@/components/SidebarClient";
 import MobileHeader from "@/components/MobileHeader";
 import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingWizard from "@/components/OnboardingWizard";
+import Image from "next/image";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -26,7 +27,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-14 flex items-center justify-between px-6 border-b" style={{ borderColor: "var(--border)", background: "var(--bg-sidebar)" }}>
           <MobileHeader />
           <div className="flex-1" />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <Image
+              src="/valora-logo.png"
+              alt="Valora"
+              width={100}
+              height={32}
+              style={{ height: 30, width: "auto", objectFit: "contain", opacity: 0.85 }}
+              priority
+            />
             <ThemeToggle />
             <div className="text-right hidden sm:block">
               <p className="text-xs font-medium" style={{ color: "var(--text)" }}>{profile?.nome}</p>

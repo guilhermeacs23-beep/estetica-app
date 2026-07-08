@@ -42,6 +42,7 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const lojaName = nomeLoja ?? ((profile?.tenants as any)?.nome_fantasia as string) ?? "Studio RPM";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -56,15 +57,19 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
       style={{ width: collapsed ? 60 : 220, minWidth: collapsed ? 60 : 220, background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
       <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
-        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0" style={{ textDecoration: "none" }} title="Voltar ao Dashboard">
+        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0" style={{ textDecoration: "none" }} title="Dashboard">
           {collapsed ? (
             <div className="rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
               style={{ width:36, height:36, fontSize:18, background:"var(--primary)" }}>
-              {(nomeLoja ?? ((profile as any)?.tenants?.nome_fantasia as string) ?? "R")[0]?.toUpperCase()}
+              {lojaName[0]?.toUpperCase()}
             </div>
           ) : (
-            <img src={logoUrl ?? "/logo.png"} alt={nomeLoja ?? "Logo"}
-              style={{ height:44, width:"auto", objectFit:"contain", maxWidth:156, borderRadius:4 }} />
+            <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"var(--primary)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <span style={{ color:"#fff", fontWeight:800, fontSize:14 }}>{lojaName[0]?.toUpperCase()}</span>
+              </div>
+              <span className="truncate" style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{lojaName}</span>
+            </div>
           )}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0"

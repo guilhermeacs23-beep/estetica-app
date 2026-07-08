@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import WhatsAppConfig from "@/components/WhatsAppConfig";
+import WhatsAppConversas from "@/components/WhatsAppConversas";
 
 const CORES = [
   { label: "Crimson (padrão)", hex: "#C41E3A" },
@@ -46,9 +47,12 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
   const [savingCor, setSavingCor] = useState(false);
   const [savedCor, setSavedCor] = useState(false);
   const searchParams = useSearchParams();
-  const [aba, setAba] = useState<"config"|"whatsapp">(
-    searchParams.get("aba") === "whatsapp" ? "whatsapp" : "config"
-  );
+  const [aba, setAba] = useState<"config"|"whatsapp"|"conversas">(() => {
+    const p = searchParams.get("aba");
+    if (p === "whatsapp") return "whatsapp";
+    if (p === "conversas") return "conversas";
+    return "config";
+  });
 
   const set = (k: string, v: any) => setConfig((c: any) => ({ ...c, [k]: v }));
 
@@ -76,7 +80,7 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
   return (
     <div className="flex flex-col gap-6">
       <div className="flex gap-2" style={{ borderBottom:"1px solid var(--border)", paddingBottom:0 }}>
-        {([["config","Configuracoes"],["whatsapp","WhatsApp"]] as const).map(([key,label])=>(
+        {([["config","Configuracoes"],["whatsapp","WhatsApp"],["conversas","Conversas"]] as const).map(([key,label])=>(
           <button key={key} onClick={()=>setAba(key)}
             style={{ padding:"10px 20px", fontSize:13, fontWeight:600, border:"none", cursor:"pointer", borderBottom: aba===key ? "2px solid var(--primary)" : "2px solid transparent", color: aba===key ? "var(--primary)" : "var(--text-muted)", background:"none" }}>
             {label}
@@ -85,6 +89,7 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
       </div>
 
       {aba === "whatsapp" && <WhatsAppConfig />}
+      {aba === "conversas" && <WhatsAppConversas />}
       {aba === "config" && (
         <div className="max-w-xl flex flex-col gap-6">
           <h1 className="text-2xl font-bold" style={{ color:"var(--text)" }}>Configuracoes</h1>
