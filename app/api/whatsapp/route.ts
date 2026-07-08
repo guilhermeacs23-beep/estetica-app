@@ -12,13 +12,18 @@ async function evo(path: string, method = "GET", body?: unknown) {
     headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
     body: body ? JSON.stringify(body) : undefined,
   });
-  return res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { raw: text }; }
 }
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!EVO_URL || !EVO_KEY) {
+    return NextResponse.json({ error: "Evolution API nao configurada", configured: false });
+  }
 
   const action = req.nextUrl.searchParams.get("action") ?? "status";
 
@@ -33,20 +38,33 @@ export async function GET(req: NextRequest) {
 
   if (action === "qrcode") {
     try {
-      // Tenta criar instância se não existir
+      // Criar instancia se nao existir
       await evo(`/instance/create`, "POST", {
         instanceName: INSTANCE,
         qrcode: true,
         integration: "WHATSAPP-BAILEYS",
       }).catch(() => {});
+
+      // Aguardar um momento
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Pegar QR code
       const data = await evo(`/instance/connect/${INSTANCE}`);
-      return NextResponse.json(data);
+
+      // Extrair base64 de diferentes formatos da Evolution API
+      const base64 =
+        data?.base64 ||
+        data?.qrcode?.base64 ||
+        data?.code ||
+        null;
+
+      return NextResponse.json({ base64, raw: data });
     } catch (e: any) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ error: "action inválida" }, { status: 400 });
+  return NextResponse.json({ error: "action invalida" }, { status: 400 });
 }
 
 export async function POST(req: NextRequest) {
@@ -55,7 +73,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { telefone, mensagem } = await req.json();
-  if (!telefone || !mensagem) return NextResponse.json({ error: "telefone e mensagem obrigatórios" }, { status: 400 });
+  if (!telefone || !mensagem) return NextResponse.json({ error: "telefone e mensagem obrigatorios" }, { status: 400 });
 
   const tel = telefone.replace(/\D/g, "");
   const numero = tel.startsWith("55") ? tel : `55${tel}`;
@@ -65,7 +83,8 @@ export async function POST(req: NextRequest) {
       number: numero,
       text: mensagem,
     });
-    return NextResponse.json(data);
+    const ok = !data?.error && !data?.message?.includes("error");
+    return NextResponse.json({ ok, data });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

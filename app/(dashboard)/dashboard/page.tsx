@@ -59,7 +59,7 @@ const MODULOS_ATIVOS = [
   { href: "/relatorios",        label: "RELATÓRIOS",         icon: <IconChart /> },
   { href: "/painel-tv",         label: "PAINEL TV",          icon: <IconTV />, newTab: true },
   { href: "/configuracoes",     label: "CONFIGURAÇÕES",      icon: <IconSettings /> },
-  { href: "/configuracoes?aba=whatsapp", label: "WHATSAPP",  icon: <span style={{fontSize:18}}>💬</span> },
+  { href: "/configuracoes?aba=whatsapp", label: "WHATSAPP",  icon: <IconWhatsApp /> },
 ];
 
 const MODULOS_EM_BREVE = [

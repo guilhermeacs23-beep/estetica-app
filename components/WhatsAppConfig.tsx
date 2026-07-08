@@ -98,7 +98,13 @@ export default function WhatsAppConfig() {
     try {
       const r = await fetch("/api/whatsapp?action=qrcode");
       const d = await r.json();
-      if (d.base64) setQrCode(d.base64);
+      if (d.base64) {
+        setQrCode(d.base64);
+      } else {
+        // Debug: mostrar resposta bruta da API
+        console.error("QR sem base64:", d);
+        setQrCode("debug:" + JSON.stringify(d).slice(0, 200));
+      }
       // Polling a cada 4s
       const interval = setInterval(async () => {
         const connected = await checkStatus();
@@ -170,8 +176,15 @@ export default function WhatsAppConfig() {
         {qrCode && (
           <div className="flex flex-col items-center gap-3 p-4 rounded-xl" style={{ background:"var(--bg)", border:"1px solid var(--border)" }}>
             <p className="text-sm font-semibold" style={{ color:"var(--text)" }}>Escaneie com o WhatsApp</p>
-            <img src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
-              alt="QR Code" style={{ width:200, height:200, borderRadius:8 }} />
+            {qrCode.startsWith("debug:") ? (
+              <div className="text-xs p-3 rounded" style={{ background:"#1a1a2e", color:"#ff6b6b", fontFamily:"monospace", maxWidth:300, wordBreak:"break-all" }}>
+                <strong>Resposta da API:</strong><br/>
+                {qrCode.replace("debug:", "")}
+              </div>
+            ) : (
+              <img src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                alt="QR Code" style={{ width:220, height:220, borderRadius:8 }} />
+            )}
             <p className="text-xs text-center" style={{ color:"var(--text-muted)" }}>
               Abra o WhatsApp → Dispositivos Conectados → Conectar dispositivo
             </p>
