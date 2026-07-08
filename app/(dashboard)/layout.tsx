@@ -5,7 +5,6 @@ import SidebarClient from "@/components/SidebarClient";
 import MobileHeader from "@/components/MobileHeader";
 import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingWizard from "@/components/OnboardingWizard";
-import Image from "next/image";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -26,31 +25,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {!onboardingOk && profile?.role === "owner" && <OnboardingWizard tenantId={profile.tenant_id} />}
       <SidebarClient profile={profile} logoUrl={null} nomeLoja={nomeLoja} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 flex items-center gap-4 px-6 border-b"
+        <header className="h-14 flex items-center justify-between px-6 border-b"
           style={{ borderColor: "var(--border)", background: "var(--bg-sidebar)" }}>
 
-          {/* LEFT — logo da Valora (agência) */}
-          <Image
-            src="/valora-logo.png"
-            alt="Valora"
-            width={120}
-            height={36}
-            style={{ height: 32, width: "auto", objectFit: "contain" }}
-            priority
-          />
-
-          <div style={{ width: 1, height: 22, background: "var(--border)", flexShrink: 0 }} />
           <MobileHeader />
-
           <div className="flex-1" />
 
-          {/* RIGHT — logo do cliente + controles */}
           <div className="flex items-center gap-3">
+            {/* Logo do cliente */}
             <img
               src={clienteLogo}
               alt={nomeLoja}
-              style={{ height: 30, width: "auto", objectFit: "contain", maxWidth: 130,
-                opacity: 0.9, borderRadius: 4 }}
+              style={{ height: 30, width: "auto", objectFit: "contain", maxWidth: 130, opacity: 0.9 }}
             />
             <div style={{ width: 1, height: 22, background: "var(--border)", flexShrink: 0 }} />
             <ThemeToggle />

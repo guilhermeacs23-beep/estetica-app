@@ -465,13 +465,10 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 
 /* ── Chat WhatsApp Background ─────────────────────────── */
 .chat-bg {
-  background-color: #efe9e3;
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2780%27%20height%3D%2780%27%3E%0A%3Ccircle%20cx%3D%278%27%20cy%3D%278%27%20r%3D%273%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.45%27%2F%3E%0A%3Ccircle%20cx%3D%2748%27%20cy%3D%278%27%20r%3D%272%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.3%27%2F%3E%0A%3Ccircle%20cx%3D%278%27%20cy%3D%2748%27%20r%3D%272%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.3%27%2F%3E%0A%3Ccircle%20cx%3D%2748%27%20cy%3D%2748%27%20r%3D%273%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.45%27%2F%3E%0A%3Cpath%20d%3D%27M28%2020L35%2027L28%2034L21%2027Z%27%20fill%3D%27none%27%20stroke%3D%27%23bfb0a6%27%20stroke-width%3D%271.2%27%20stroke-opacity%3D%270.38%27%2F%3E%0A%3Ccircle%20cx%3D%2768%27%20cy%3D%2728%27%20r%3D%272%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.3%27%2F%3E%0A%3Ccircle%20cx%3D%2728%27%20cy%3D%2768%27%20r%3D%272%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.3%27%2F%3E%0A%3Ccircle%20cx%3D%2768%27%20cy%3D%2768%27%20r%3D%272.5%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.38%27%2F%3E%0A%3Cline%20x1%3D%2758%27%20y1%3D%2710%27%20x2%3D%2758%27%20y2%3D%2716%27%20stroke%3D%27%23bfb0a6%27%20stroke-width%3D%271.2%27%20stroke-opacity%3D%270.3%27%20stroke-linecap%3D%27round%27%2F%3E%0A%3Cline%20x1%3D%2755%27%20y1%3D%2713%27%20x2%3D%2761%27%20y2%3D%2713%27%20stroke%3D%27%23bfb0a6%27%20stroke-width%3D%271.2%27%20stroke-opacity%3D%270.3%27%20stroke-linecap%3D%27round%27%2F%3E%0A%3Cline%20x1%3D%2718%27%20y1%3D%2760%27%20x2%3D%2718%27%20y2%3D%2766%27%20stroke%3D%27%23bfb0a6%27%20stroke-width%3D%271.2%27%20stroke-opacity%3D%270.3%27%20stroke-linecap%3D%27round%27%2F%3E%0A%3Cline%20x1%3D%2715%27%20y1%3D%2763%27%20x2%3D%2721%27%20y2%3D%2763%27%20stroke%3D%27%23bfb0a6%27%20stroke-width%3D%271.2%27%20stroke-opacity%3D%270.3%27%20stroke-linecap%3D%27round%27%2F%3E%0A%3Ccircle%20cx%3D%2738%27%20cy%3D%2758%27%20r%3D%271.5%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.25%27%2F%3E%0A%3Ccircle%20cx%3D%2758%27%20cy%3D%2738%27%20r%3D%271.5%27%20fill%3D%27%23bfb0a6%27%20fill-opacity%3D%270.25%27%2F%3E%0A%3C%2Fsvg%3E");
-  background-size: 80px 80px;
+  background-color: #ece5dd;
 }
 [data-theme="dark"] .chat-bg {
   background-color: #0f1923;
-  background-image: none;
 }
 .msg-received {
   background: #ffffff;
@@ -488,7 +485,6 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   color: rgba(0,0,0,0.5);
   background: rgba(255,255,255,0.82);
   border: 1px solid rgba(0,0,0,0.06);
-  backdrop-filter: blur(8px);
 }
 [data-theme="dark"] .msg-date-pill {
   color: rgba(255,255,255,0.5);

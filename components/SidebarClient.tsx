@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 type NavItem =
   | { href: string; label: string; icon: string; newTab?: boolean }
@@ -38,11 +39,12 @@ const NAV: NavItem[] = [
   { href: "/configuracoes",        label: "Configuracoes",     icon: "C" },
 ];
 
-export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile: Record<string, unknown>; logoUrl?: string|null; nomeLoja?: string|null }) {
+export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
+  profile: Record<string, unknown>; logoUrl?: string|null; nomeLoja?: string|null
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const lojaName = nomeLoja ?? ((profile?.tenants as any)?.nome_fantasia as string) ?? "Studio RPM";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -54,22 +56,26 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
   return (
     <aside
       className="hidden md:flex flex-col border-r transition-all duration-200"
-      style={{ width: collapsed ? 60 : 220, minWidth: collapsed ? 60 : 220, background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
+      style={{ width: collapsed ? 60 : 220, minWidth: collapsed ? 60 : 220,
+        background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
+      {/* Logo Valora no topo */}
       <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
-        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0" style={{ textDecoration: "none" }} title="Dashboard">
+        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0"
+          style={{ textDecoration: "none" }} title="Dashboard">
           {collapsed ? (
-            <div className="rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
-              style={{ width:36, height:36, fontSize:18, background:"var(--primary)" }}>
-              {lojaName[0]?.toUpperCase()}
+            <div className="rounded-lg flex items-center justify-center font-bold flex-shrink-0"
+              style={{ width:36, height:36, fontSize:13, background:"var(--surface)",
+                border:"1px solid var(--border)", overflow:"hidden" }}>
+              <Image src="/valora-logo.png" alt="V" width={36} height={36}
+                style={{ width:36, height:36, objectFit:"cover" }} />
             </div>
           ) : (
-            <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
-              <div style={{ width:32, height:32, borderRadius:8, background:"var(--primary)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <span style={{ color:"#fff", fontWeight:800, fontSize:14 }}>{lojaName[0]?.toUpperCase()}</span>
-              </div>
-              <span className="truncate" style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{lojaName}</span>
-            </div>
+            <Image src="/valora-logo.png" alt="Valora"
+              width={140} height={40}
+              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148 }}
+              priority
+            />
           )}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0"
@@ -81,9 +87,7 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
       <nav className="flex-1 overflow-y-auto py-2 px-2 flex flex-col gap-0.5">
         {NAV.map((item, i) => {
           if ("section" in item) {
-            if (collapsed) {
-              return <div key={i} style={{ height:1, background:"var(--border)", margin:"6px 4px" }} />;
-            }
+            if (collapsed) return <div key={i} style={{ height:1, background:"var(--border)", margin:"6px 4px" }} />;
             return (
               <div key={i} style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
                 color:"var(--text-muted)", padding:"10px 6px 3px", opacity:0.55 }}>
@@ -91,9 +95,7 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
               </div>
             );
           }
-          if ("divider" in item) {
-            return <div key={i} style={{ height:1, background:"var(--border)", margin:"4px 0" }} />;
-          }
+          if ("divider" in item) return <div key={i} style={{ height:1, background:"var(--border)", margin:"4px 0" }} />;
           const it = item as { href: string; label: string; icon: string; newTab?: boolean };
           const isExact = it.href === "/dashboard" || it.href.includes("?");
           const active = pathname === it.href || (!isExact && pathname.startsWith(it.href));
