@@ -44,6 +44,7 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
   const [corCustom, setCorCustom] = useState(ini?.cor_primaria ?? "#C41E3A");
   const [savingCor, setSavingCor] = useState(false);
   const [savedCor, setSavedCor] = useState(false);
+  const [aba, setAba] = useState<"config"|"whatsapp">("config");
 
   const set = (k: string, v: any) => setConfig((c: any) => ({ ...c, [k]: v }));
 
@@ -67,8 +68,6 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
   if (role !== "owner") return (
     <div className="card text-center py-12"><p style={{ color:"var(--text-muted)" }}>Apenas o owner pode acessar as configurações.</p></div>
   );
-
-  const [aba, setAba] = useState<"config"|"whatsapp">("config");
 
   return (
     <div className="flex flex-col gap-6">
@@ -244,4 +243,4 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
     </div>
       </div>
     );
-}
+} 
