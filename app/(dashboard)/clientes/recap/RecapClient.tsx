@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 
 type Cliente = { id: string; nome: string; telefone?: string; whatsapp?: string; cidade?: string; };
-type Ordem   = { id: string; cliente_id: string; data_entrada: string; status: string; valor_final?: number; os_servicos?: { nome: string }[]; };
+type Ordem   = { id: string; cliente_id: string; data_entrada: string; finalizado_em?: string; status: string; valor_final?: number; os_servicos?: { nome: string; servicos?: { tempo_retorno_dias?: number } }[]; };
 
 type ClienteRecap = {
   cliente: Cliente;
@@ -12,6 +12,7 @@ type ClienteRecap = {
   diasSemVisita: number;
   ticketMedio: number;
   servicos: string[];
+  tempoRetorno: number;
   bucket: "enviado" | "verde" | "azul" | "amarelo" | "vermelho";
 };
 
@@ -28,13 +29,14 @@ const BUCKET = {
   vermelho: { label:"Crítico",         cor:"#dc2626", bg:"rgba(220,38,38,0.1)",   icon:"!",  desc:"+60 dias ou sem histórico" },
 };
 
-function getBucket(dias: number, totalVisitas: number, enviado: boolean): ClienteRecap["bucket"] {
+function getBucket(dias: number, totalVisitas: number, enviado: boolean, tempoRetorno: number): ClienteRecap["bucket"] {
   if (enviado) return "enviado";
   if (totalVisitas === 0) return "vermelho";
-  if (dias <= 14) return "verde";
-  if (dias <= 30) return "azul";
-  if (dias <= 60) return "amarelo";
-  return "vermelho";
+  const t = tempoRetorno;
+  if (dias <= Math.round(t * 0.6)) return "verde";     // dentro do prazo confortavel
+  if (dias <= t) return "azul";                          // chegando no prazo - contatar
+  if (dias <= Math.round(t * 1.5)) return "amarelo";   // passou um pouco
+  return "vermelho";                                     // passou muito
 }
 
 export default function RecapClient({ clientes, ordens, webhookN8n, nomeLoja }: {
@@ -60,8 +62,10 @@ export default function RecapClient({ clientes, ordens, webhookN8n, nomeLoja }: 
       const totalGasto    = ords.reduce((s, o) => s + (o.valor_final ?? 0), 0);
       const ticketMedio   = totalVisitas > 0 ? totalGasto / totalVisitas : 0;
       const servicos      = [...new Set(ords.flatMap(o => (o.os_servicos ?? []).map(s => s.nome)))].slice(0, 3);
-      const bucket        = getBucket(diasSemVisita, totalVisitas, enviados.has(c.id));
-      return { cliente: c, totalVisitas, ultimaVisita, diasSemVisita, ticketMedio, servicos, bucket };
+      const tempos = ords[0]?.os_servicos?.map(s => s.servicos?.tempo_retorno_dias ?? 0).filter(t => t > 0) ?? [];
+      const tempoRetorno = tempos.length ? Math.max(...tempos) : 30;
+      const bucket        = getBucket(diasSemVisita, totalVisitas, enviados.has(c.id), tempoRetorno);
+      return { cliente: c, totalVisitas, ultimaVisita, diasSemVisita, ticketMedio, servicos, tempoRetorno, bucket };
     });
   }, [clientes, ordens, enviados]);
 

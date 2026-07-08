@@ -1,177 +1,262 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-type Status = "open" | "close" | "connecting" | "loading" | "offline";
+type Toggles = {
+  wpp_os_criada: boolean;
+  wpp_os_execucao: boolean;
+  wpp_os_finalizada: boolean;
+  wpp_agendamento: boolean;
+  wpp_recap: boolean;
+  wpp_recap_antecedencia_dias: number;
+};
+
+const GATILHOS = [
+  {
+    key: "wpp_os_criada" as keyof Toggles,
+    label: "OS Criada",
+    desc: "Quando uma nova ordem de serviço é aberta",
+    preview: (nome: string) => `Olá ${nome}! 🚗\n\nRecebemos seu veículo e abrimos uma OS para você.\nAcompanhe o andamento pelo nosso sistema.\n\n— Studio RPM`,
+  },
+  {
+    key: "wpp_os_execucao" as keyof Toggles,
+    label: "Em Execução",
+    desc: "Quando o técnico inicia o serviço",
+    preview: (nome: string) => `Olá ${nome}! 🔧\n\nSeu veículo já está com nosso técnico e o serviço começou!\n\n— Studio RPM`,
+  },
+  {
+    key: "wpp_os_finalizada" as keyof Toggles,
+    label: "OS Finalizada",
+    desc: "Quando o serviço é concluído e pronto para retirada",
+    preview: (nome: string) => `Olá ${nome}! ✨\n\nSeu veículo está *pronto* para retirada!\nPassando por aqui, pode vir buscar.\n\nObrigado pela preferência 🙏\n— Studio RPM`,
+  },
+  {
+    key: "wpp_agendamento" as keyof Toggles,
+    label: "Lembrete de Agendamento",
+    desc: "1 dia antes do agendamento marcado na Agenda",
+    preview: (nome: string) => `Olá ${nome}! 📅\n\nLembrando que seu veículo tem um agendamento *amanhã* conosco!\n\nQualquer dúvida, estamos à disposição.\n— Studio RPM`,
+  },
+  {
+    key: "wpp_recap" as keyof Toggles,
+    label: "Recap (Recaptura)",
+    desc: "Antecipa o cliente antes do prazo de retorno do serviço vencer",
+    preview: (nome: string) => `Olá ${nome}! 🚗✨\n\nTá chegando a hora de cuidar do seu veículo!\nAgende agora e garanta sua vaga.\n\n— Studio RPM`,
+  },
+];
 
 export default function WhatsAppConfig() {
-  const [status, setStatus] = useState<Status>("loading");
-  const [qr, setQr] = useState<string | null>(null);
-  const [loadingQr, setLoadingQr] = useState(false);
-  const [testTel, setTestTel] = useState("");
-  const [testMsg, setTestMsg] = useState("Olá! Mensagem de teste do Studio RPM 🚗");
+  const [status, setStatus] = useState<"loading"|"connected"|"disconnected"|"error">("loading");
+  const [qrCode, setQrCode] = useState<string|null>(null);
+  const [polling, setPolling] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMsg, setTestMsg] = useState("Teste de conexão do Studio RPM! 🚗");
   const [sending, setSending] = useState(false);
-  const [log, setLog] = useState<string | null>(null);
-  const poolRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [sendResult, setSendResult] = useState<string|null>(null);
+  const [previewKey, setPreviewKey] = useState<string|null>(null);
 
-  async function checkStatus() {
+  const [toggles, setToggles] = useState<Toggles>({
+    wpp_os_criada: false,
+    wpp_os_execucao: false,
+    wpp_os_finalizada: true,
+    wpp_agendamento: false,
+    wpp_recap: false,
+    wpp_recap_antecedencia_dias: 2,
+  });
+  const [savingToggles, setSavingToggles] = useState(false);
+  const [savedToggles, setSavedToggles] = useState(false);
+
+  const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/whatsapp?action=status");
-      const data = await res.json();
-      const state: Status = data?.instance?.state ?? data?.state ?? "offline";
-      setStatus(state === "open" ? "open" : state === "close" ? "close" : "connecting");
-      if (state === "open") {
-        setQr(null);
-        if (poolRef.current) clearInterval(poolRef.current);
-      }
+      const r = await fetch("/api/whatsapp?action=status");
+      const d = await r.json();
+      const state = d?.instance?.state ?? d?.state ?? "unknown";
+      setStatus(state === "open" ? "connected" : "disconnected");
+      return state === "open";
     } catch {
-      setStatus("offline");
+      setStatus("error");
+      return false;
     }
-  }
+  }, []);
 
   useEffect(() => {
     checkStatus();
-  }, []);
+    // Carregar toggles
+    fetch("/api/configuracoes").then(r => r.json()).then(d => {
+      if (d) setToggles({
+        wpp_os_criada: d.wpp_os_criada ?? false,
+        wpp_os_execucao: d.wpp_os_execucao ?? false,
+        wpp_os_finalizada: d.wpp_os_finalizada ?? true,
+        wpp_agendamento: d.wpp_agendamento ?? false,
+        wpp_recap: d.wpp_recap ?? false,
+        wpp_recap_antecedencia_dias: d.wpp_recap_antecedencia_dias ?? 2,
+      });
+    }).catch(() => {});
+  }, [checkStatus]);
 
   async function conectar() {
-    setLoadingQr(true);
-    setQr(null);
+    setQrCode(null);
+    setPolling(true);
     try {
-      const res = await fetch("/api/whatsapp?action=qrcode");
-      const data = await res.json();
-      const base64 = data?.base64 ?? data?.qrcode?.base64 ?? null;
-      setQr(base64);
-      setStatus("connecting");
-      // Polling a cada 4s para detectar quando conectar
-      if (poolRef.current) clearInterval(poolRef.current);
-      poolRef.current = setInterval(checkStatus, 4000);
+      const r = await fetch("/api/whatsapp?action=qrcode");
+      const d = await r.json();
+      if (d.base64) setQrCode(d.base64);
+      // Polling a cada 4s
+      const interval = setInterval(async () => {
+        const connected = await checkStatus();
+        if (connected) {
+          clearInterval(interval);
+          setQrCode(null);
+          setPolling(false);
+        }
+      }, 4000);
+      setTimeout(() => { clearInterval(interval); setPolling(false); }, 120000);
     } catch {
-      setLog("Erro ao buscar QR Code. Verifique a URL da Evolution API.");
+      setPolling(false);
+      setStatus("error");
     }
-    setLoadingQr(false);
-  }
-
-  async function desconectar() {
-    await fetch("/api/whatsapp?action=status"); // placeholder
-    setStatus("close");
-    setQr(null);
-    setLog("Desconectado.");
   }
 
   async function enviarTeste() {
-    if (!testTel) return alert("Informe o telefone");
-    setSending(true);
-    const res = await fetch("/api/whatsapp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefone: testTel, mensagem: testMsg }),
-    });
-    const data = await res.json();
-    setLog(data.error ? `Erro: ${data.error}` : "✓ Mensagem enviada com sucesso!");
+    setSending(true); setSendResult(null);
+    try {
+      const r = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone: testPhone, mensagem: testMsg }),
+      });
+      const d = await r.json();
+      setSendResult(d.ok ? "Enviado!" : "Erro: " + (d.error ?? "falha"));
+    } catch { setSendResult("Erro de conexao"); }
     setSending(false);
   }
 
-  const statusInfo = {
-    open:       { label: "Conectado",    color: "#22c55e", bg: "#dcfce7", dot: "#16a34a" },
-    close:      { label: "Desconectado", color: "#ef4444", bg: "#fee2e2", dot: "#dc2626" },
-    connecting: { label: "Conectando…",  color: "#f59e0b", bg: "#fef3c7", dot: "#d97706" },
-    loading:    { label: "Verificando…", color: "#6b7280", bg: "#f3f4f6", dot: "#9ca3af" },
-    offline:    { label: "API Offline",  color: "#dc2626", bg: "#fee2e2", dot: "#dc2626" },
-  }[status];
+  async function salvarToggles() {
+    setSavingToggles(true);
+    await fetch("/api/configuracoes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(toggles),
+    });
+    setSavingToggles(false); setSavedToggles(true);
+    setTimeout(() => setSavedToggles(false), 2000);
+  }
+
+  const COR = { connected: "#16a34a", disconnected: "#d97706", error: "#dc2626", loading: "#6b7280" };
+  const LABEL = { connected: "Conectado", disconnected: "Desconectado", error: "Erro", loading: "Verificando..." };
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Status */}
-      <div className="card flex items-center justify-between flex-wrap gap-4" style={{ padding:"20px 24px" }}>
-        <div className="flex items-center gap-3">
-          <div style={{ width:12, height:12, borderRadius:"50%", background:statusInfo.dot,
-            boxShadow: status==="open" ? `0 0 8px ${statusInfo.dot}` : "none",
-            animation: status==="connecting" ? "pulse 1.2s infinite" : "none" }} />
-          <div>
-            <p className="font-semibold" style={{ color:"var(--text)", fontSize:15 }}>WhatsApp</p>
-            <p style={{ fontSize:12, color:statusInfo.color, fontWeight:700 }}>{statusInfo.label}</p>
+      {/* Status card */}
+      <div className="card flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div style={{ width:10, height:10, borderRadius:"50%", background: COR[status],
+              boxShadow: status==="connected" ? `0 0 8px ${COR[status]}` : "none" }} />
+            <div>
+              <div className="font-semibold" style={{ color:"var(--text)" }}>WhatsApp Business</div>
+              <div className="text-xs" style={{ color: COR[status] }}>{LABEL[status]}</div>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn btn-secondary btn-sm" onClick={checkStatus}>↺ Atualizar</button>
-          {status !== "open"
-            ? <button className="btn btn-primary" disabled={loadingQr} onClick={conectar}>
-                {loadingQr ? "Gerando QR..." : "Conectar WhatsApp"}
+          <div className="flex gap-2">
+            <button onClick={checkStatus} className="btn btn-secondary" style={{ fontSize:12 }}>Atualizar</button>
+            {status !== "connected" && (
+              <button onClick={conectar} disabled={polling} className="btn btn-primary" style={{ fontSize:12 }}>
+                {polling ? "Aguardando QR..." : "Conectar WhatsApp"}
               </button>
-            : <button className="btn btn-secondary" onClick={desconectar}>Desconectar</button>
-          }
+            )}
+          </div>
         </div>
+
+        {qrCode && (
+          <div className="flex flex-col items-center gap-3 p-4 rounded-xl" style={{ background:"var(--bg)", border:"1px solid var(--border)" }}>
+            <p className="text-sm font-semibold" style={{ color:"var(--text)" }}>Escaneie com o WhatsApp</p>
+            <img src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+              alt="QR Code" style={{ width:200, height:200, borderRadius:8 }} />
+            <p className="text-xs text-center" style={{ color:"var(--text-muted)" }}>
+              Abra o WhatsApp → Dispositivos Conectados → Conectar dispositivo
+            </p>
+          </div>
+        )}
+
+        {status === "connected" && (
+          <div className="flex flex-col gap-3 pt-3" style={{ borderTop:"1px solid var(--border)" }}>
+            <p className="text-xs font-semibold" style={{ color:"var(--text-muted)", textTransform:"uppercase" }}>Enviar mensagem de teste</p>
+            <div className="flex gap-2">
+              <input className="input flex-1" placeholder="55119..." value={testPhone}
+                onChange={e => setTestPhone(e.target.value)} />
+              <button onClick={enviarTeste} disabled={sending || !testPhone} className="btn btn-primary" style={{ fontSize:12 }}>
+                {sending ? "..." : "Enviar"}
+              </button>
+            </div>
+            <textarea className="input" rows={2} value={testMsg} onChange={e => setTestMsg(e.target.value)} />
+            {sendResult && <p className="text-xs" style={{ color: sendResult.startsWith("Env") ? "#16a34a" : "#dc2626" }}>{sendResult}</p>}
+          </div>
+        )}
       </div>
 
-      {/* QR Code */}
-      {(qr || loadingQr) && status !== "open" && (
-        <div className="card flex flex-col items-center gap-4" style={{ padding:"32px" }}>
-          <h3 className="font-semibold" style={{ color:"var(--text)" }}>Escaneie com o WhatsApp</h3>
-          <p style={{ fontSize:13, color:"var(--text-muted)", textAlign:"center" }}>
-            Abra o WhatsApp → Dispositivos conectados → Conectar dispositivo
-          </p>
-          {loadingQr
-            ? <div style={{ width:240, height:240, background:"var(--surface)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <p style={{ color:"var(--text-muted)", fontSize:13 }}>Gerando QR Code…</p>
+      {/* Toggles de automacao */}
+      <div className="card flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold" style={{ color:"var(--text)" }}>Automacoes de Mensagem</h2>
+          <button onClick={salvarToggles} disabled={savingToggles} className="btn btn-primary" style={{ fontSize:12 }}>
+            {savedToggles ? "Salvo!" : savingToggles ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {GATILHOS.map(g => (
+            <div key={g.key}>
+              <div className="flex items-start justify-between gap-4 p-3 rounded-lg"
+                style={{ background:"var(--bg)", border:"1px solid var(--border)" }}>
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color:"var(--text)" }}>{g.label}</span>
+                    <button onClick={() => setPreviewKey(previewKey===g.key ? null : g.key)}
+                      style={{ fontSize:10, color:"var(--text-muted)", background:"none", border:"none", cursor:"pointer", textDecoration:"underline" }}>
+                      {previewKey===g.key ? "ocultar preview" : "ver preview"}
+                    </button>
+                  </div>
+                  <span className="text-xs" style={{ color:"var(--text-muted)" }}>{g.desc}</span>
+                  {g.key === "wpp_recap" && (toggles.wpp_recap as boolean) && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs" style={{ color:"var(--text-muted)" }}>Antecipar</span>
+                      <input type="number" min={1} max={14} value={toggles.wpp_recap_antecedencia_dias}
+                        onChange={e => setToggles(t => ({ ...t, wpp_recap_antecedencia_dias: parseInt(e.target.value)||2 }))}
+                        className="input" style={{ width:60, fontSize:13 }} />
+                      <span className="text-xs" style={{ color:"var(--text-muted)" }}>dias antes do vencimento</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <button
+                    onClick={() => setToggles(t => ({ ...t, [g.key]: !t[g.key as keyof Toggles] }))}
+                    style={{
+                      width:44, height:24, borderRadius:12, border:"none", cursor:"pointer",
+                      background: toggles[g.key as keyof Toggles] ? "var(--primary)" : "var(--border)",
+                      position:"relative", transition:"background 0.2s",
+                    }}>
+                    <span style={{
+                      position:"absolute", top:3, left: toggles[g.key as keyof Toggles] ? 23 : 3,
+                      width:18, height:18, borderRadius:"50%", background:"#fff",
+                      transition:"left 0.2s", display:"block",
+                    }} />
+                  </button>
+                </div>
               </div>
-            : qr && <img src={qr} alt="QR Code WhatsApp" style={{ width:240, height:240, borderRadius:8, border:"4px solid var(--border)" }} />
-          }
-          <p style={{ fontSize:11, color:"var(--text-muted)" }}>O QR Code expira em 30 segundos. Clique em "Conectar" para gerar um novo.</p>
-        </div>
-      )}
-
-      {/* Conectado */}
-      {status === "open" && (
-        <div className="card" style={{ padding:"20px 24px", borderLeft:"4px solid #22c55e" }}>
-          <p style={{ color:"var(--text)", fontWeight:600 }}>✓ WhatsApp conectado e pronto para envios automáticos</p>
-          <p style={{ fontSize:13, color:"var(--text-muted)", marginTop:4 }}>
-            Disparos ativos: OS finalizada · Recap de Clientes
-          </p>
-        </div>
-      )}
-
-      {/* Teste de envio */}
-      {status === "open" && (
-        <div className="card flex flex-col gap-4" style={{ padding:"20px 24px" }}>
-          <h3 className="font-semibold" style={{ color:"var(--text)" }}>Testar envio</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="field">
-              <label className="label">Telefone (com DDD)</label>
-              <input className="input" placeholder="41999999999" value={testTel} onChange={e=>setTestTel(e.target.value)} />
+              {previewKey === g.key && (
+                <div className="mt-1 p-3 rounded-lg text-xs whitespace-pre-line"
+                  style={{ background:"#1a2e1a", color:"#4ade80", fontFamily:"monospace", border:"1px solid #166534" }}>
+                  {g.preview("[Nome do Cliente]")}
+                </div>
+              )}
             </div>
-            <div className="field col-span-2">
-              <label className="label">Mensagem</label>
-              <textarea className="input" rows={2} value={testMsg} onChange={e=>setTestMsg(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <button className="btn btn-primary" disabled={sending} onClick={enviarTeste}>
-              {sending ? "Enviando…" : "💬 Enviar teste"}
-            </button>
-          </div>
-          {log && <p style={{ fontSize:13, color: log.startsWith("✓") ? "#16a34a" : "#dc2626" }}>{log}</p>}
+          ))}
         </div>
-      )}
 
-      {/* Config */}
-      <div className="card flex flex-col gap-2" style={{ padding:"16px 24px" }}>
-        <p style={{ fontSize:12, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Configuração Evolution API</p>
-        <p style={{ fontSize:13, color:"var(--text-muted)" }}>
-          Variáveis necessárias no Vercel:
-        </p>
-        <div style={{ background:"var(--surface)", borderRadius:6, padding:"12px 16px", fontFamily:"monospace", fontSize:12, color:"var(--text)", lineHeight:1.8 }}>
-          EVOLUTION_API_URL = https://seu-app.railway.app<br/>
-          EVOLUTION_API_KEY = sua-chave-secreta<br/>
-          EVOLUTION_INSTANCE = studiorpm
+        <div className="p-3 rounded-lg text-xs" style={{ background:"rgba(217,119,6,0.08)", border:"1px solid rgba(217,119,6,0.2)", color:"#d97706" }}>
+          As automacoes so disparam se o WhatsApp estiver conectado. O Recap roda diariamente as 8h.
         </div>
-        <p style={{ fontSize:11, color:"var(--text-muted)" }}>
-          Após adicionar no Vercel → Settings → Environment Variables, faça um novo deploy.
-        </p>
       </div>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-      `}</style>
     </div>
   );
 }

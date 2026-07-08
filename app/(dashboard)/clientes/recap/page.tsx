@@ -17,7 +17,7 @@ export default async function RecapPage() {
 
   const { data: ordens } = await supabaseAdmin
     .from("ordens_servico")
-    .select("id, cliente_id, data_entrada, status, valor_final, os_servicos(nome)")
+    .select("id, cliente_id, data_entrada, finalizado_em, status, valor_final, os_servicos(nome, servicos(tempo_retorno_dias))")
     .eq("tenant_id", profile!.tenant_id)
     .in("status", ["finalizado", "entregue"])
     .order("data_entrada", { ascending: false });
