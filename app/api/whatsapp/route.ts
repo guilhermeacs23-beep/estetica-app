@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       number: numero,
       text: mensagem,
     });
-    const ok = !data?.error && !data?.message?.includes("error");
+    const ok = !data?.error && (typeof data?.message !== "string" || !data.message.includes("error"));
     return NextResponse.json({ ok, data });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
