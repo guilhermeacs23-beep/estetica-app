@@ -23,6 +23,7 @@ const NAV = [
   { href: "/usuarios",             label: "Usuarios",           icon: "U" },
   { href: "/relatorios",           label: "Relatorios",         icon: "R" },
   { href: "/configuracoes",        label: "Configuracoes",      icon: "C" },
+  { href: "/configuracoes?aba=whatsapp", label: "WhatsApp",     icon: "W" },
 ];
 
 export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile: Record<string, unknown>; logoUrl?: string|null; nomeLoja?: string|null }) {
@@ -87,9 +88,4 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: { profile:
         )}
         <button onClick={handleLogout} className="sidebar-link w-full" style={{ color: "var(--danger)" }}>
           <span style={{ fontSize: 13 }}>X</span>
-          {!collapsed && <span>Sair</span>}
-        </button>
-      </div>
-    </aside>
-  );
-}
+          {!collap
