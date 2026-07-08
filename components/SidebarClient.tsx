@@ -64,18 +64,20 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
         <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0"
           style={{ textDecoration: "none" }} title="Dashboard">
           {collapsed ? (
-            <div className="rounded-lg flex items-center justify-center font-bold flex-shrink-0"
-              style={{ width:36, height:36, fontSize:13, background:"var(--surface)",
-                border:"1px solid var(--border)", overflow:"hidden" }}>
-              <Image src="/valora-logo.png" alt="V" width={36} height={36}
-                style={{ width:36, height:36, objectFit:"cover" }} />
+            <div className="rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ width:36, height:36, background:"#0f172a", overflow:"hidden", borderRadius:8 }}>
+              <Image src="/valora-logo.png" alt="V" width={32} height={32}
+                style={{ width:32, height:32, objectFit:"contain" }} />
             </div>
           ) : (
-            <Image src="/valora-logo.png" alt="Valora"
-              width={140} height={40}
-              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148 }}
-              priority
-            />
+            <div style={{ background:"#0f172a", borderRadius:8, padding:"4px 10px",
+              display:"flex", alignItems:"center", justifyContent:"center", height:40, maxWidth:150 }}>
+              <Image src="/valora-logo.png" alt="Valora"
+                width={130} height={32}
+                style={{ height:30, width:"auto", objectFit:"contain", filter:"brightness(1.1)" }}
+                priority
+              />
+            </div>
           )}
         </Link>
         <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0"
