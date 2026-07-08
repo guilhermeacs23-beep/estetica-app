@@ -57,7 +57,10 @@ export default function WhatsAppConversas() {
     inputRef.current?.focus();
     const r = await fetch("/api/whatsapp/inbox?numero=" + encodeURIComponent(numero));
     const d = await r.json();
-    if (d.mensagens) setMsgs(d.mensagens);
+    if (d.mensagens) {
+      setMsgs(d.mensagens);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 50);
+    }
     await fetch("/api/whatsapp/inbox", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ numero }),
@@ -249,6 +252,8 @@ export default function WhatsAppConversas() {
             flex: 1, overflowY: "auto", padding: "20px 24px",
             display: "flex", flexDirection: "column", gap: 4,
           }}>
+            {/* spacer empurra mensagens para o rodapé */}
+            <div style={{ flex: 1 }} />
             {groupByDate(msgs).map(group => (
               <div key={group.date}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0 12px" }}>

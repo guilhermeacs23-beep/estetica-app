@@ -55,8 +55,8 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
     return () => obs.disconnect();
   }, []);
 
-  // Logo Valora: tema claro = letras escuras (brightness 0), tema escuro = original
-  const logoFilter = isDark ? "none" : "brightness(0) opacity(0.85)";
+  // Usa logo escura no tema claro, logo original (azul) no tema escuro
+  const logoSrc = isDark ? "/valora-logo.png" : "/valora-logo-dark.png";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -77,13 +77,13 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
           {collapsed ? (
             <div className="rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ width:36, height:36, overflow:"hidden" }}>
-              <Image src="/valora-logo.png" alt="V" width={36} height={36}
-                style={{ width:36, height:36, objectFit:"contain", filter: logoFilter }} />
+              <Image src={logoSrc} alt="V" width={36} height={36}
+                style={{ width:36, height:36, objectFit:"contain" }} />
             </div>
           ) : (
-            <Image src="/valora-logo.png" alt="Valora"
+            <Image src={logoSrc} alt="Valora"
               width={148} height={40}
-              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148, filter: logoFilter }}
+              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148 }}
               priority
             />
           )}
