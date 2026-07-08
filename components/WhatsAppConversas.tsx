@@ -8,6 +8,21 @@ type Msg = {
 };
 type Conv = { numero: string; nome: string; ultimaMensagem: string; timestamp: string; naoLidas: number; };
 
+function fmtHora(ts: string) {
+  return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+function fmtData(ts: string) {
+  const d = new Date(ts);
+  const hoje = new Date();
+  const diff = Math.floor((hoje.getTime() - d.getTime()) / 86400000);
+  if (diff === 0) return fmtHora(ts);
+  if (diff === 1) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+function avatar(nome: string) {
+  return nome.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
+}
+
 export default function WhatsAppConversas() {
   const [conversas, setConversas] = useState<Conv[]>([]);
   const [sel, setSel] = useState<string | null>(null);
@@ -15,7 +30,9 @@ export default function WhatsAppConversas() {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function carregarConversas() {
     const r = await fetch("/api/whatsapp/inbox");
@@ -26,105 +43,158 @@ export default function WhatsAppConversas() {
 
   async function abrirConversa(numero: string) {
     setSel(numero);
+    inputRef.current?.focus();
     const r = await fetch("/api/whatsapp/inbox?numero=" + encodeURIComponent(numero));
     const d = await r.json();
     if (d.mensagens) setMsgs(d.mensagens);
-    await fetch("/api/whatsapp/inbox", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ numero }) });
+    await fetch("/api/whatsapp/inbox", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ numero }),
+    });
     setConversas(c => c.map(cv => cv.numero === numero ? { ...cv, naoLidas: 0 } : cv));
   }
 
   async function enviar() {
     if (!sel || !texto.trim()) return;
     setEnviando(true);
+    const txt = texto;
+    setTexto("");
     await fetch("/api/whatsapp", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefone: sel, mensagem: texto }),
+      body: JSON.stringify({ telefone: sel, mensagem: txt }),
     });
-    // Inserir localmente enquanto webhook nao retorna
     const nova: Msg = { id: Date.now().toString(), numero: sel, nome_contato: null,
-      mensagem: texto, tipo: "enviada", lida: true, timestamp: new Date().toISOString() };
+      mensagem: txt, tipo: "enviada", lida: true, timestamp: new Date().toISOString() };
     setMsgs(m => [...m, nova]);
-    setConversas(c => c.map(cv => cv.numero === sel ? { ...cv, ultimaMensagem: texto, timestamp: nova.timestamp } : cv));
-    setTexto("");
+    setConversas(c => c.map(cv => cv.numero === sel
+      ? { ...cv, ultimaMensagem: txt, timestamp: nova.timestamp } : cv));
     setEnviando(false);
   }
 
   useEffect(() => {
     carregarConversas();
     const supabase = createClient();
-    const channel = supabase
-      .channel("wpp_inbox_rt")
+    const channel = supabase.channel("wpp_inbox_rt2")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_inbox" }, (payload) => {
         const nova = payload.new as Msg;
         setConversas(prev => {
-          const arr = prev.filter(c => c.numero !== nova.numero);
           const exist = prev.find(c => c.numero === nova.numero);
+          const filtered = prev.filter(c => c.numero !== nova.numero);
           return [{
-            numero: nova.numero,
-            nome: nova.nome_contato || nova.numero,
-            ultimaMensagem: nova.mensagem,
-            timestamp: nova.timestamp,
+            numero: nova.numero, nome: nova.nome_contato || nova.numero,
+            ultimaMensagem: nova.mensagem, timestamp: nova.timestamp,
             naoLidas: nova.tipo === "recebida" ? (exist ? exist.naoLidas + 1 : 1) : (exist?.naoLidas ?? 0),
-          }, ...arr];
+          }, ...filtered];
         });
-        setSel(current => {
-          if (current === nova.numero) {
-            setMsgs(m => [...m, nova]);
-          }
-          return current;
+        setSel(cur => {
+          if (cur === nova.numero) setMsgs(m => [...m, nova]);
+          return cur;
         });
-      })
-      .subscribe();
+      }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const convSel = conversas.find(c => c.numero === sel);
+  const filtradas = conversas.filter(c =>
+    c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    c.numero.includes(busca)
+  );
+
+  // Agrupar mensagens por data
+  function groupByDate(msgs: Msg[]) {
+    const groups: { date: string; msgs: Msg[] }[] = [];
+    let lastDate = "";
+    for (const m of msgs) {
+      const d = new Date(m.timestamp).toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" });
+      if (d !== lastDate) { groups.push({ date: d, msgs: [] }); lastDate = d; }
+      groups[groups.length - 1].msgs.push(m);
+    }
+    return groups;
+  }
 
   return (
-    <div style={{ display:"flex", height:580, border:"1px solid var(--border)", borderRadius:12, overflow:"hidden" }}>
-      {/* Lista */}
-      <div style={{ width:260, borderRight:"1px solid var(--border)", display:"flex", flexDirection:"column", background:"var(--bg)" }}>
-        <div style={{ padding:"10px 14px", borderBottom:"1px solid var(--border)", background:"var(--surface)" }}>
-          <p style={{ fontSize:12, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Conversas</p>
+    <div style={{
+      display: "flex", height: 620, borderRadius: 16, overflow: "hidden",
+      border: "1px solid var(--border)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+    }}>
+      {/* ── LISTA DE CONVERSAS ── */}
+      <div style={{ width: 280, display: "flex", flexDirection: "column", background: "var(--bg-sidebar)", borderRight: "1px solid var(--border)" }}>
+        {/* Header */}
+        <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid var(--border)" }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>Mensagens</p>
+          <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--text-muted)" }}>🔍</span>
+            <input
+              value={busca} onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar conversa..."
+              style={{ width: "100%", padding: "7px 10px 7px 30px", fontSize: 12, borderRadius: 8,
+                border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)",
+                outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
         </div>
-        <div style={{ flex:1, overflowY:"auto" }}>
-          {loading && <p style={{ padding:16, fontSize:13, color:"var(--text-muted)" }}>Carregando...</p>}
-          {!loading && conversas.length === 0 && (
-            <div style={{ padding:24, textAlign:"center" }}>
-              <p style={{ fontSize:24, marginBottom:8 }}>💬</p>
-              <p style={{ fontSize:13, color:"var(--text-muted)" }}>Nenhuma conversa ainda</p>
-              <p style={{ fontSize:11, color:"var(--text-muted)", marginTop:4 }}>Mensagens recebidas aparecem aqui</p>
+
+        {/* Lista */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {loading && (
+            <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+              Carregando...
             </div>
           )}
-          {conversas.map(c => (
-            <div key={c.numero} onClick={() => abrirConversa(c.numero)}
-              style={{ padding:"10px 14px", cursor:"pointer", borderBottom:"1px solid var(--border)",
-                background: sel === c.numero ? "rgba(0,0,0,0.04)" : "transparent",
-                borderLeft: sel === c.numero ? "3px solid var(--primary)" : "3px solid transparent" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:36, height:36, borderRadius:"50%", background:"var(--surface)", flexShrink:0,
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700,
-                  color:"var(--primary)", border:"1px solid var(--border)" }}>
-                  {(c.nome || c.numero)[0]?.toUpperCase()}
+          {!loading && filtradas.length === 0 && (
+            <div style={{ padding: 32, textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
+              <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 600 }}>Nenhuma conversa</p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                Mensagens recebidas aparecem aqui
+              </p>
+            </div>
+          )}
+          {filtradas.map(c => (
+            <div key={c.numero} onClick={() => abrirConversa(c.numero)} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+              cursor: "pointer", transition: "background 0.15s",
+              background: sel === c.numero ? "rgba(var(--primary-rgb,196,30,58),0.07)" : "transparent",
+              borderLeft: sel === c.numero ? "3px solid var(--primary)" : "3px solid transparent",
+              borderBottom: "1px solid var(--border)",
+            }}>
+              {/* Avatar */}
+              <div style={{
+                width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                background: sel === c.numero ? "var(--primary)" : "var(--surface)",
+                border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 700,
+                color: sel === c.numero ? "#fff" : "var(--primary)",
+                transition: "all 0.2s",
+              }}>
+                {avatar(c.nome)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: c.naoLidas > 0 ? 700 : 600, color: "var(--text)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                    {c.nome}
+                  </span>
+                  <span style={{ fontSize: 10, color: c.naoLidas > 0 ? "var(--primary)" : "var(--text-muted)", flexShrink: 0, marginLeft: 6 }}>
+                    {fmtData(c.timestamp)}
+                  </span>
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontSize:13, fontWeight:600, color:"var(--text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      {c.nome}
-                    </span>
-                    {c.naoLidas > 0 && (
-                      <span style={{ background:"var(--primary)", color:"#fff", borderRadius:"50%",
-                        width:18, height:18, fontSize:10, display:"flex", alignItems:"center",
-                        justifyContent:"center", fontWeight:700, flexShrink:0 }}>
-                        {c.naoLidas}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize:11, color:"var(--text-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden",
+                    textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, margin: 0 }}>
                     {c.ultimaMensagem}
                   </p>
+                  {c.naoLidas > 0 && (
+                    <span style={{
+                      background: "var(--primary)", color: "#fff", borderRadius: "50%",
+                      minWidth: 18, height: 18, padding: "0 4px", fontSize: 10,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontWeight: 700, flexShrink: 0,
+                    }}>{c.naoLidas}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -132,57 +202,137 @@ export default function WhatsAppConversas() {
         </div>
       </div>
 
-      {/* Thread */}
+      {/* ── ÁREA DE CHAT ── */}
       {sel ? (
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"10px 16px", borderBottom:"1px solid var(--border)", background:"var(--surface)", display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:32, height:32, borderRadius:"50%", background:"var(--bg)",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700,
-              color:"var(--primary)", border:"1px solid var(--border)" }}>
-              {(convSel?.nome || sel)[0]?.toUpperCase()}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          {/* Header da conversa */}
+          <div style={{
+            padding: "10px 20px", borderBottom: "1px solid var(--border)",
+            background: "var(--bg-sidebar)", display: "flex", alignItems: "center", gap: 12,
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%", background: "var(--primary)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
+            }}>
+              {avatar(convSel?.nome || sel)}
             </div>
             <div>
-              <p style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{convSel?.nome || sel}</p>
-              <p style={{ fontSize:11, color:"var(--text-muted)" }}>{sel}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: 0 }}>
+                {convSel?.nome || sel}
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{sel}</p>
             </div>
           </div>
 
-          <div style={{ flex:1, overflowY:"auto", padding:16, display:"flex", flexDirection:"column", gap:8, background:"var(--bg)" }}>
-            {msgs.map(m => (
-              <div key={m.id} style={{ display:"flex", justifyContent: m.tipo === "enviada" ? "flex-end" : "flex-start" }}>
-                <div style={{
-                  maxWidth:"72%", padding:"8px 12px",
-                  borderRadius: m.tipo === "enviada" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                  background: m.tipo === "enviada" ? "var(--primary)" : "var(--surface)",
-                  color: m.tipo === "enviada" ? "#fff" : "var(--text)",
-                  fontSize:13, lineHeight:1.5,
-                  border: m.tipo === "recebida" ? "1px solid var(--border)" : "none",
-                }}>
-                  <p style={{ margin:0 }}>{m.mensagem}</p>
-                  <p style={{ fontSize:10, opacity:0.65, marginTop:3, textAlign:"right", margin:"3px 0 0" }}>
-                    {new Date(m.timestamp).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
-                  </p>
+          {/* Fundo gradiente + mensagens */}
+          <div style={{
+            flex: 1, overflowY: "auto", padding: "20px 24px",
+            display: "flex", flexDirection: "column", gap: 4,
+            background: "linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 30%, #1a1a2e 70%, #0f0f2d 100%)",
+            backgroundAttachment: "fixed",
+          }}>
+            {groupByDate(msgs).map(group => (
+              <div key={group.date}>
+                {/* Separador de data */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0 12px" }}>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                  <span style={{
+                    fontSize: 11, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.08)",
+                    padding: "3px 12px", borderRadius: 20, whiteSpace: "nowrap",
+                    textTransform: "capitalize",
+                  }}>
+                    {group.date}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {group.msgs.map((m, i) => {
+                    const enviada = m.tipo === "enviada";
+                    const proxIgual = group.msgs[i + 1]?.tipo === m.tipo;
+                    return (
+                      <div key={m.id} style={{
+                        display: "flex", justifyContent: enviada ? "flex-end" : "flex-start",
+                        marginBottom: proxIgual ? 2 : 8,
+                      }}>
+                        <div style={{
+                          maxWidth: "68%", padding: "9px 14px",
+                          borderRadius: enviada ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                          background: enviada
+                            ? "var(--primary)"
+                            : "rgba(255,255,255,0.12)",
+                          backdropFilter: enviada ? "none" : "blur(10px)",
+                          border: enviada ? "none" : "1px solid rgba(255,255,255,0.15)",
+                          color: "#fff",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                        }}>
+                          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, wordBreak: "break-word" }}>
+                            {m.mensagem}
+                          </p>
+                          <p style={{ margin: "4px 0 0", fontSize: 10, opacity: 0.65, textAlign: "right" }}>
+                            {fmtHora(m.timestamp)}
+                            {enviada && " ✓"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
+            {msgs.length === 0 && (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Nenhuma mensagem ainda</p>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)", background:"var(--surface)", display:"flex", gap:8 }}>
-            <input className="input" style={{ flex:1, fontSize:13 }}
+          {/* Input */}
+          <div style={{
+            padding: "10px 16px", borderTop: "1px solid var(--border)",
+            background: "var(--bg-sidebar)", display: "flex", gap: 8, alignItems: "center",
+          }}>
+            <input
+              ref={inputRef}
+              className="input" style={{ flex: 1, fontSize: 13, borderRadius: 24, padding: "10px 16px" }}
               placeholder="Digite uma mensagem... (Enter para enviar)"
               value={texto} onChange={e => setTexto(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), enviar())} />
-            <button onClick={enviar} disabled={enviando || !texto.trim()} className="btn btn-primary" style={{ fontSize:12 }}>
-              {enviando ? "..." : "Enviar"}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), enviar())}
+            />
+            <button onClick={enviar} disabled={enviando || !texto.trim()}
+              style={{
+                width: 40, height: 40, borderRadius: "50%", border: "none", cursor: "pointer",
+                background: texto.trim() ? "var(--primary)" : "var(--border)",
+                color: "#fff", fontSize: 16, display: "flex", alignItems: "center",
+                justifyContent: "center", flexShrink: 0, transition: "background 0.2s",
+              }}>
+              {enviando ? "…" : "➤"}
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)" }}>
-          <div style={{ textAlign:"center", color:"var(--text-muted)" }}>
-            <p style={{ fontSize:36, marginBottom:8 }}>💬</p>
-            <p style={{ fontSize:14 }}>Selecione uma conversa</p>
+        /* Estado vazio — fundo gradiente + mensagem central */
+        <div style={{
+          flex: 1,
+          background: "linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 30%, #1a1a2e 70%, #0f0f2d 100%)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16,
+        }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: "50%",
+            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36,
+          }}>
+            💬
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.8)", margin: "0 0 6px" }}>
+              Suas mensagens
+            </p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+              Selecione uma conversa para começar
+            </p>
           </div>
         </div>
       )}
