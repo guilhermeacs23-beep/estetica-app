@@ -71,27 +71,34 @@ export default function SidebarClient({ profile, logoUrl, nomeLoja }: {
       style={{ width: collapsed ? 60 : 220, minWidth: collapsed ? 60 : 220,
         background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
-      <div className="h-14 flex items-center px-3 border-b gap-2" style={{ borderColor: "var(--border)" }}>
-        <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0"
-          style={{ textDecoration: "none" }} title="Dashboard">
-          {collapsed ? (
-            <div className="rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ width:36, height:36, overflow:"hidden" }}>
-              <Image src={logoSrc} alt="V" width={36} height={36}
-                style={{ width:36, height:36, objectFit:"contain" }} />
-            </div>
-          ) : (
-            <Image src={logoSrc} alt="Valora"
-              width={148} height={40}
-              style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148 }}
-              priority
-            />
-          )}
-        </Link>
-        <button onClick={() => setCollapsed(!collapsed)} className="ml-auto flex-shrink-0"
-          style={{ color:"var(--text-muted)", background:"none", border:"none", cursor:"pointer", fontSize:12 }}>
-          {collapsed ? ">" : "<"}
-        </button>
+      <div className="h-14 flex items-center border-b" style={{ borderColor: "var(--border)" }}>
+        {collapsed ? (
+          /* Recolhida: área inteira clicável para expandir */
+          <button onClick={() => setCollapsed(false)}
+            style={{ width:"100%", height:"100%", display:"flex", alignItems:"center",
+              justifyContent:"center", background:"none", border:"none", cursor:"pointer",
+              padding:0, gap:0 }}
+            title="Expandir menu">
+            <Image src={logoSrc} alt="Valora" width={40} height={40}
+              style={{ width:40, height:40, objectFit:"contain" }} priority />
+          </button>
+        ) : (
+          /* Expandida: logo + botão recolher */
+          <>
+            <Link href="/dashboard" style={{ textDecoration:"none", flex:1, minWidth:0,
+              display:"flex", alignItems:"center", paddingLeft:12 }}>
+              <Image src={logoSrc} alt="Valora" width={148} height={40}
+                style={{ height:36, width:"auto", objectFit:"contain", maxWidth:148 }} priority />
+            </Link>
+            <button onClick={() => setCollapsed(true)}
+              style={{ width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center",
+                background:"none", border:"none", cursor:"pointer", flexShrink:0, marginRight:6,
+                borderRadius:8, color:"var(--text-muted)", fontSize:16, fontWeight:700 }}
+              title="Recolher menu">
+              ‹
+            </button>
+          </>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2 px-2 flex flex-col gap-0.5">
