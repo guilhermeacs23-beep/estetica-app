@@ -47,7 +47,7 @@ export default function UsuariosClient({ usuarios: init }: { usuarios: Usuario[]
   }
 
   return (
-    <div className="flex flex-col gap-6" style={{ maxWidth:720 }}>
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color:"var(--text)" }}>Usuarios</h1>
@@ -131,11 +131,17 @@ export default function UsuariosClient({ usuarios: init }: { usuarios: Usuario[]
                     <option value="tecnico">Tecnico</option>
                   </select>
                 </td>
-                <td style={{ padding:"12px 16px", fontSize:12, color:"var(--text-muted)" }}>
+                <td style={{ padding:"12px 16px", fontSize:12, color:"var(--text-muted)", whiteSpace:"nowrap" }}>
                   {u.last_sign_in_at
-                    ? new Date(u.last_sign_in_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"short", year:"numeric" }) +
-                      " " + new Date(u.last_sign_in_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })
-                    : <span style={{ color:"var(--text-muted)", fontStyle:"italic" }}>Nunca</span>
+                    ? <>
+                        <div style={{ fontWeight:600, color:"var(--text)" }}>
+                          {new Date(u.last_sign_in_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" })}
+                        </div>
+                        <div style={{ fontSize:11 }}>
+                          {new Date(u.last_sign_in_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
+                        </div>
+                      </>
+                    : <span style={{ fontStyle:"italic" }}>Nunca</span>
                   }
                 </td>
                 <td style={{ padding:"12px 16px" }}>
