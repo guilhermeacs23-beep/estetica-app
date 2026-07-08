@@ -240,7 +240,7 @@ export default function ConfiguracoesClient({ config: ini, formas: iniFormas, te
           </div>
         )}
       </div>
+    </div>}
     </div>
-      </div>
     );
-} 
+}  
