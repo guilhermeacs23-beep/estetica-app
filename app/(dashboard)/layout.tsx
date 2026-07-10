@@ -13,6 +13,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabaseAdmin
     .from("profiles").select("*, tenants(*)").eq("id", user.id).single();
+
+  // Registra último acesso em tempo real
+  await supabaseAdmin.from("profiles").update({ ultimo_acesso: new Date().toISOString() }).eq("id", user.id);
   const { data: config } = await supabaseAdmin
     .from("configuracoes").select("cor_primaria, onboarding_completo, logo_url, nome_fantasia").eq("tenant_id", profile!.tenant_id).single();
   const corPrimaria = config?.cor_primaria ?? "#c0392b";

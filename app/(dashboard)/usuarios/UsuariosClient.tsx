@@ -4,7 +4,7 @@ import { useState } from "react";
 const ROLES: Record<string,string> = { owner:"Dono", atendente:"Atendente", tecnico:"Tecnico" };
 const ROLE_COLOR: Record<string,string> = { owner:"var(--primary)", atendente:"#3b82f6", tecnico:"#f97316" };
 
-type Usuario = { id:string; nome:string; email:string; role:string; ativo:boolean; created_at:string; last_sign_in_at:string|null };
+type Usuario = { id:string; nome:string; email:string; role:string; ativo:boolean; created_at:string; ultimo_acesso:string|null };
 
 export default function UsuariosClient({ usuarios: init }: { usuarios: Usuario[] }) {
   const [usuarios, setUsuarios] = useState(init);
@@ -132,13 +132,13 @@ export default function UsuariosClient({ usuarios: init }: { usuarios: Usuario[]
                   </select>
                 </td>
                 <td style={{ padding:"12px 16px", fontSize:12, color:"var(--text-muted)", whiteSpace:"nowrap" }}>
-                  {u.last_sign_in_at
+                  {u.ultimo_acesso
                     ? <>
                         <div style={{ fontWeight:600, color:"var(--text)" }}>
-                          {new Date(u.last_sign_in_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" })}
+                          {new Date(u.ultimo_acesso).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" })}
                         </div>
                         <div style={{ fontSize:11 }}>
-                          {new Date(u.last_sign_in_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
+                          {new Date(u.ultimo_acesso).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
                         </div>
                       </>
                     : <span style={{ fontStyle:"italic" }}>Nunca</span>

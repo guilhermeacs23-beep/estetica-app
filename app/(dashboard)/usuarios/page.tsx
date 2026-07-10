@@ -9,23 +9,12 @@ export default async function UsuariosPage() {
   const { data: profile } = await supabaseAdmin.from("profiles")
     .select("tenant_id, role").eq("id", user!.id).single();
   if (profile?.role !== "owner") redirect("/dashboard");
-  const [{ data: usuarios }, { data: { users: authUsers } }] = await Promise.all([
-    supabaseAdmin.from("profiles")
-      .select("id, nome, email, role, ativo, created_at")
-      .eq("tenant_id", profile!.tenant_id)
-      .order("nome"),
-    supabaseAdmin.auth.admin.listUsers({ perPage: 200 }),
-  ]);
 
-  const lastSignIn: Record<string, string|null> = {};
-  for (const u of authUsers ?? []) {
-    lastSignIn[u.id] = u.last_sign_in_at ?? null;
-  }
+  const { data: usuarios } = await supabaseAdmin
+    .from("profiles")
+    .select("id, nome, email, role, ativo, created_at, ultimo_acesso")
+    .eq("tenant_id", profile!.tenant_id)
+    .order("nome");
 
-  const usuariosComAcesso = (usuarios ?? []).map(u => ({
-    ...u,
-    last_sign_in_at: lastSignIn[u.id] ?? null,
-  }));
-
-  return <UsuariosClient usuarios={usuariosComAcesso} />;
+  return <UsuariosClient usuarios={usuarios ?? []} />;
 }
