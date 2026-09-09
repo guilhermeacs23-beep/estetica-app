@@ -14,7 +14,7 @@
     "next": "^15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "valora-nucleo": "github:guilhermeacs23-beep/valora-nucleo#a2580c3f225c5db432bfd5fa62ed9831275734c8",
+    "valora-nucleo": "github:guilhermeacs23-beep/valora-nucleo#e8a37a0cb059bcb914bbede7f99c2ec09fffe822",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
