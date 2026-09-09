@@ -1,35 +1,14 @@
+/**
+ * Passagem, de proposito.
+ *
+ * O LoginValora traz a propria moldura de tela cheia. Se esta camada
+ * continuasse desenhando blobs, logo e vidro, o cartao do login apareceria
+ * dentro de outro cartao — foi exatamente o que aconteceu no Rustic quando a
+ * troca foi feita sem mexer aqui.
+ *
+ * A moldura antiga nao sumiu: desceu para a pagina de cadastro, que ainda a
+ * usa. Ver app/(auth)/cadastro/moldura.tsx.
+ */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="auth-bg">
-      <div className="auth-blob auth-blob-1" />
-      <div className="auth-blob auth-blob-2" />
-
-      <div className="auth-wrapper">
-        {/* LOGO — mix-blend-mode:screen elimina o fundo preto do PNG */}
-        <div className="auth-logo-wrap">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="Studio RPM"
-            className="auth-logo"
-          />
-        </div>
-
-        <div className="auth-glass">
-          {children}
-        </div>
-
-        {/* Rodapé Valora */}
-        <div className="auth-footer">
-          <span>Desenvolvido por</span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/valora-logo.png"
-            alt="Valora Business Technology"
-            className="auth-valora"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }

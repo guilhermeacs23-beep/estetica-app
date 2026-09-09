@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import MolduraCadastro from "./moldura";
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function CadastroPage() {
   }
 
   return (
+    <MolduraCadastro>
     <div className="card">
       <h1 className="text-xl font-semibold mb-1" style={{ color: "var(--text)" }}>Criar conta</h1>
       <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>Cadastre sua estética no Studio RPM</p>
@@ -77,5 +79,6 @@ export default function CadastroPage() {
         <Link href="/login" style={{ color: "var(--primary)" }} className="font-medium hover:underline">Entrar</Link>
       </p>
     </div>
+    </MolduraCadastro>
   );
 }
