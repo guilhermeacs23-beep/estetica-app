@@ -1,128 +1,93 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  INSTANCE, configurado, evo, enviarTexto, configurarWebhook, webhookAtual, webhookUrl, versaoServidor,
+} from "@/lib/whatsapp";
+import { atualizarContato } from "@/lib/contatos";
 
-const EVO_URL = process.env.EVOLUTION_API_URL ?? "";
-const EVO_KEY = process.env.EVOLUTION_API_KEY ?? "";
-const INSTANCE = process.env.EVOLUTION_INSTANCE ?? "studiorpm";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-async function evo(path: string, method = "GET", body?: unknown) {
-  const res = await fetch(`${EVO_URL}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  try { return JSON.parse(text); } catch { return { raw: text }; }
+async function usuario() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: p } = await supabaseAdmin.from("profiles").select("tenant_id, role").eq("id", user.id).single();
+  return p ? { id: user.id, tenantId: p.tenant_id as string, role: p.role as string } : null;
+}
+
+function origem(req: NextRequest) {
+  return process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  if (!EVO_URL || !EVO_KEY) {
-    return NextResponse.json({ error: "Evolution API nao configurada", configured: false });
-  }
+  const u = await usuario();
+  if (!u) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!configurado()) return NextResponse.json({ error: "WhatsApp não configurado no servidor", configured: false });
 
   const action = req.nextUrl.searchParams.get("action") ?? "status";
 
   if (action === "status") {
-    try {
-      const data = await evo(`/instance/connectionState/${INSTANCE}`);
-      return NextResponse.json(data);
-    } catch {
-      return NextResponse.json({ state: "close", error: "Evolution API offline" });
-    }
+    const { ok, status, dado } = await evo(`/instance/connectionState/${INSTANCE}`).catch(() => ({ ok: false, status: 0, dado: null }));
+    if (status === 404) return NextResponse.json({ state: "sem_instancia" });
+    if (!ok) return NextResponse.json({ state: "close", error: "Servidor do WhatsApp fora do ar" });
+    return NextResponse.json(dado);
   }
 
   if (action === "qrcode") {
-    try {
-      // Criar instancia se nao existir
-      await evo(`/instance/create`, "POST", {
-        instanceName: INSTANCE,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }).catch(() => {});
-
-      // Aguardar um momento
-      await new Promise(r => setTimeout(r, 1000));
-
-      // Pegar QR code
-      const data = await evo(`/instance/connect/${INSTANCE}`);
-
-      // Extrair base64 de diferentes formatos da Evolution API
-      const base64 =
-        data?.base64 ||
-        data?.qrcode?.base64 ||
-        data?.code ||
-        null;
-
-      return NextResponse.json({ base64, raw: data });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    // Cria a instância só se ela não existir (o nome é fixo; nada de criar duplicata).
+    const st = await evo(`/instance/connectionState/${INSTANCE}`).catch(() => ({ status: 0 } as any));
+    if (st.status === 404) {
+      const v = await versaoServidor();
+      await evo(`/instance/create`, "POST", v.startsWith("1")
+        ? { instanceName: INSTANCE, qrcode: true }
+        : { instanceName: INSTANCE, qrcode: true, integration: "WHATSAPP-BAILEYS" });
     }
+    // O webhook já sai apontado antes da leitura do QR: a primeira mensagem não se perde.
+    await configurarWebhook(webhookUrl(origem(req))).catch(() => null);
+    const { dado } = await evo(`/instance/connect/${INSTANCE}`);
+    const d = dado as any;
+    const base64 = d?.base64 || d?.qrcode?.base64 || null;
+    return NextResponse.json({ base64 });
   }
 
   if (action === "setup-webhook") {
-    const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-    const webhookUrl = `${origin}/api/whatsapp/webhook`;
-    try {
-      await evo(`/webhook/set/${INSTANCE}`, "PUT", {
-        url: webhookUrl,
-        webhook_by_events: false,
-        webhook_base64: false,
-        events: ["MESSAGES_UPSERT"],
-      });
-      return NextResponse.json({ ok: true, webhookUrl });
-    } catch (e: any) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
-    }
+    const url = webhookUrl(origem(req));
+    const r = await configurarWebhook(url);
+    const gravado = await webhookAtual();
+    return NextResponse.json({ ok: r.ok && gravado === url, versao: r.versao, conferido: gravado === url });
+  }
+
+  if (action === "desconectar" && u.role === "owner") {
+    const r = await evo(`/instance/logout/${INSTANCE}`, "DELETE");
+    return NextResponse.json({ ok: r.ok });
   }
 
   return NextResponse.json({ error: "action invalida" }, { status: 400 });
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const u = await usuario();
+  if (!u) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { telefone, mensagem } = await req.json();
   if (!telefone || !mensagem) return NextResponse.json({ error: "telefone e mensagem obrigatorios" }, { status: 400 });
 
-  const tel = telefone.replace(/\D/g, "");
-  const numero = tel.startsWith("55") ? tel : `55${tel}`;
+  const r = await enviarTexto(telefone, mensagem);
+  if (!r.ok) return NextResponse.json({ ok: false, error: r.erro ?? "falha no envio" });
 
-  // Buscar tenant
-  const { data: profile } = await supabaseAdmin.from("profiles").select("tenant_id").eq("id", user.id).single();
-  const tenantId = profile?.tenant_id;
+  // Grava com o wa_id: quando o eco voltar pelo webhook, o índice único descarta.
+  const c = await atualizarContato(u.tenantId, r.numero).catch(() => ({ nome: null }));
+  await supabaseAdmin.from("whatsapp_inbox").upsert({
+    tenant_id: u.tenantId,
+    wa_id: r.waId,
+    numero: r.numero,
+    nome_contato: c.nome,
+    mensagem,
+    tipo: "enviada",
+    lida: true,
+    timestamp: new Date().toISOString(),
+  }, { onConflict: "tenant_id,wa_id", ignoreDuplicates: true });
 
-  try {
-    const data = await evo(`/message/sendText/${INSTANCE}`, "POST", {
-      number: numero,
-      text: mensagem,
-    });
-    const ok = !data?.error && (typeof data?.message !== "string" || !data.message.includes("error"));
-
-    // Logar no inbox
-    if (ok && tenantId) {
-      // Tentar identificar nome do contato
-      const { data: cli } = await supabaseAdmin.from("clientes").select("nome")
-        .eq("tenant_id", tenantId).ilike("whatsapp", "%" + numero.slice(-9)).maybeSingle();
-      await supabaseAdmin.from("whatsapp_inbox").insert({
-        tenant_id: tenantId,
-        numero,
-        nome_contato: cli?.nome ?? null,
-        mensagem,
-        tipo: "enviada",
-        lida: true,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return NextResponse.json({ ok, data });
-  } catch (e: any) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
-  }
+  return NextResponse.json({ ok: true });
 }

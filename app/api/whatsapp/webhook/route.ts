@@ -1,68 +1,105 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { tokenConfere, INSTANCE } from "@/lib/whatsapp";
+import { atualizarContato } from "@/lib/contatos";
+
+/**
+ * Webhook da Evolution — grava na conversa o que chega e o que sai do número da loja.
+ *
+ * O que mudou em 11/11/2026 (nenhuma mensagem recebida tinha entrado desde julho):
+ *  - autenticação por ?t=<token> na URL, que o app mesmo configura na Evolution.
+ *    Antes esperava a chave no cabeçalho "apikey", que a Evolution não manda.
+ *  - aceita "messages.upsert" (v2) e "MESSAGES_UPSERT" (v1). Antes só o segundo.
+ *  - a empresa vem da instância (configuracoes.wpp_instancia), não da primeira linha.
+ *  - idempotente por (tenant_id, wa_id): reenvio da Evolution e eco do painel não duplicam.
+ *  - fromMe entra como "enviada": o que o Alex responde pelo celular aparece no painel.
+ *  - nome e foto do contato ficam em whatsapp_contatos.
+ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function GET() {
   return NextResponse.json({ ok: true, webhook: "active" });
 }
 
+function extrairTexto(m: any): string | null {
+  const msg = m?.message ?? {};
+  if (msg.conversation) return msg.conversation;
+  if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
+  if (msg.imageMessage) return msg.imageMessage.caption ? `📷 ${msg.imageMessage.caption}` : "📷 Foto";
+  if (msg.videoMessage) return msg.videoMessage.caption ? `🎥 ${msg.videoMessage.caption}` : "🎥 Vídeo";
+  if (msg.audioMessage) return "🎤 Áudio";
+  if (msg.documentMessage) return `📄 ${msg.documentMessage.fileName ?? "Documento"}`;
+  if (msg.stickerMessage) return "Figurinha";
+  if (msg.locationMessage) return "📍 Localização";
+  if (msg.contactMessage) return `👤 Contato: ${msg.contactMessage.displayName ?? ""}`.trim();
+  return null; // reações, edições, protocolos: não viram mensagem
+}
+
+async function tenantDaInstancia(instancia: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("configuracoes").select("tenant_id").eq("wpp_instancia", instancia).maybeSingle();
+  return data?.tenant_id ?? null;
+}
+
 export async function POST(req: NextRequest) {
-  try {
-    const apiKey = req.headers.get("apikey");
-    if (process.env.EVOLUTION_API_KEY && apiKey !== process.env.EVOLUTION_API_KEY) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!tokenConfere(req.nextUrl.searchParams.get("t") ?? req.headers.get("x-ponte-token") ?? "")) {
+    return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+  }
 
-    const body = await req.json();
-    if (body?.event !== "MESSAGES_UPSERT" || !body?.data) {
-      return NextResponse.json({ ok: true });
-    }
+  let body: any;
+  try { body = await req.json(); } catch { return NextResponse.json({ ok: true }); }
 
-    const msg = body.data;
-    const remoteJid: string = msg?.key?.remoteJid ?? "";
-    if (remoteJid.includes("@g.us")) return NextResponse.json({ ok: true });
+  const evento = String(body?.event ?? "").toLowerCase().replace(/_/g, ".");
+  if (evento !== "messages.upsert") return NextResponse.json({ ok: true, ignorado: evento });
 
-    const fromMe: boolean = msg?.key?.fromMe ?? false;
-    const numero = remoteJid.replace("@s.whatsapp.net", "");
-    const texto: string =
-      msg?.message?.conversation ||
-      msg?.message?.extendedTextMessage?.text ||
-      msg?.message?.imageMessage?.caption ||
-      "[Midia]";
-    const pushName: string | null = msg?.pushName ?? null;
-    const ts = msg?.messageTimestamp
-      ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString()
+  const tenantId = await tenantDaInstancia(String(body?.instance ?? INSTANCE));
+  if (!tenantId) return NextResponse.json({ ok: false, error: "instância sem empresa" }, { status: 200 });
+
+  const lista: any[] = Array.isArray(body?.data) ? body.data : (body?.data?.messages ?? [body?.data]);
+  const linhas: Record<string, unknown>[] = [];
+  const contatos = new Map<string, string | null>();
+
+  for (const m of lista) {
+    const key = m?.key;
+    const jid: string = key?.remoteJid ?? "";
+    if (!jid.endsWith("@s.whatsapp.net")) continue; // grupos, status, listas
+    const texto = extrairTexto(m);
+    if (!texto) continue;
+    const numero = jid.replace("@s.whatsapp.net", "");
+    const saiu = Boolean(key?.fromMe);
+    const ts = m?.messageTimestamp
+      ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
       : new Date().toISOString();
-
-    // Encontrar tenant (MVP: primeiro tenant com configuracao)
-    const { data: configs } = await supabaseAdmin
-      .from("configuracoes").select("tenant_id").limit(1);
-    const tenantId = configs?.[0]?.tenant_id;
-    if (!tenantId) return NextResponse.json({ ok: true });
-
-    // Buscar nome do cliente
-    let nomeContato: string | null = fromMe ? null : pushName;
-    if (!fromMe) {
-      const { data: cli } = await supabaseAdmin
-        .from("clientes").select("nome")
-        .eq("tenant_id", tenantId)
-        .ilike("whatsapp", "%" + numero.slice(-9))
-        .maybeSingle();
-      if (cli?.nome) nomeContato = cli.nome;
-    }
-
-    await supabaseAdmin.from("whatsapp_inbox").insert({
+    if (!saiu) contatos.set(numero, m?.pushName ?? null);
+    else if (!contatos.has(numero)) contatos.set(numero, null);
+    linhas.push({
       tenant_id: tenantId,
+      wa_id: key?.id ?? null,
       numero,
-      nome_contato: nomeContato,
-      mensagem: texto,
-      tipo: fromMe ? "enviada" : "recebida",
-      lida: fromMe,
+      nome_contato: saiu ? null : (m?.pushName ?? null),
+      mensagem: String(texto).slice(0, 4000),
+      tipo: saiu ? "enviada" : "recebida",
+      lida: saiu,
       timestamp: ts,
     });
-
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error("Webhook error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
   }
+
+  if (!linhas.length) return NextResponse.json({ ok: true, inseridos: 0 });
+
+  // Nome e foto antes da mensagem: a tela já recebe o contato completo.
+  for (const [numero, pushName] of contatos) {
+    try {
+      const c = await atualizarContato(tenantId, numero, pushName);
+      for (const l of linhas) if (l.numero === numero && l.tipo === "recebida" && c.nome) l.nome_contato = c.nome;
+    } catch { /* contato nunca derruba o webhook */ }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("whatsapp_inbox")
+    .upsert(linhas, { onConflict: "tenant_id,wa_id", ignoreDuplicates: true });
+
+  // 200 mesmo com erro: senão a Evolution reenvia em loop. O erro fica no log da Vercel.
+  if (error) console.error("webhook whatsapp:", error.message);
+  return NextResponse.json({ ok: !error, recebidos: linhas.length });
 }

@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-const EVO_URL = process.env.EVOLUTION_API_URL ?? "";
-const EVO_KEY = process.env.EVOLUTION_API_KEY ?? "";
-const INSTANCE = process.env.EVOLUTION_INSTANCE ?? "studiorpm";
+import { configurado, enviarTexto } from "@/lib/whatsapp";
 
 async function enviarWhatsApp(telefone: string, mensagem: string, tipo: string, tenantId: string, clienteId?: string, osId?: string) {
-  if (!EVO_URL || !EVO_KEY) return;
-  const tel = telefone.replace(/\D/g, "");
-  const numero = tel.startsWith("55") ? tel : `55${tel}`;
+  if (!configurado()) return;
   try {
-    await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
-      body: JSON.stringify({ number: numero, text: mensagem }),
-    });
-    // Log
+    const r = await enviarTexto(telefone, mensagem);
     await supabaseAdmin.from("whatsapp_logs").insert({
       tenant_id: tenantId, cliente_id: clienteId ?? null,
-      os_id: osId ?? null, tipo, telefone: numero, mensagem, status: "enviado",
+      os_id: osId ?? null, tipo, telefone: r.numero, mensagem, status: r.ok ? "enviado" : "erro",
     });
+    // Aparece na conversa do cliente; o wa_id impede o eco duplicado.
+    if (r.ok) {
+      await supabaseAdmin.from("whatsapp_inbox").upsert({
+        tenant_id: tenantId, wa_id: r.waId, numero: r.numero, mensagem,
+        tipo: "enviada", lida: true, timestamp: new Date().toISOString(),
+      }, { onConflict: "tenant_id,wa_id", ignoreDuplicates: true });
+    }
   } catch {}
 }
 

@@ -6,7 +6,7 @@ type Msg = {
   id: string; numero: string; nome_contato: string | null;
   mensagem: string; tipo: "enviada" | "recebida"; lida: boolean; timestamp: string;
 };
-type Conv = { numero: string; nome: string; ultimaMensagem: string; timestamp: string; naoLidas: number; };
+type Conv = { numero: string; nome: string; foto?: string | null; ultimaMensagem: string; timestamp: string; naoLidas: number; };
 
 function fmtHora(ts: string) {
   return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -20,7 +20,22 @@ function fmtData(ts: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 function avatar(nome: string) {
-  return nome.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
+  if (/^\d+$/.test(nome)) return "#";
+  return nome.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase();
+}
+/** Foto do WhatsApp quando o contato deixa visível; senão as iniciais. */
+function Avatar({ nome, foto, size }: { nome: string; foto?: string | null; size: number }) {
+  const [falhou, setFalhou] = useState(false);
+  if (foto && !falhou) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={foto} alt="" onError={() => setFalhou(true)} referrerPolicy="no-referrer"
+      style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", display: "block" }} />;
+  }
+  return <>{avatar(nome)}</>;
+}
+function fmtNumero(n: string) {
+  const d = n.replace(/^55/, "");
+  return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, -4)}-${d.slice(-4)}` : n;
 }
 
 export default function WhatsAppConversas() {
@@ -34,6 +49,7 @@ export default function WhatsAppConversas() {
   const [isDark, setIsDark] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const enviadosAgora = useRef<Set<string>>(new Set());
 
   // detecta tema atual
   useEffect(() => {
@@ -73,12 +89,19 @@ export default function WhatsAppConversas() {
     setEnviando(true);
     const txt = texto;
     setTexto("");
-    await fetch("/api/whatsapp", {
+    const resp = await fetch("/api/whatsapp", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ telefone: sel, mensagem: txt }),
-    });
+    }).then(r => r.json()).catch(() => ({ ok: false }));
+    if (!resp?.ok) {
+      setTexto(txt);
+      setEnviando(false);
+      alert("A mensagem não foi enviada. Confira se o WhatsApp está conectado em Configurações.");
+      return;
+    }
     const nova: Msg = { id: Date.now().toString(), numero: sel, nome_contato: null,
       mensagem: txt, tipo: "enviada", lida: true, timestamp: new Date().toISOString() };
+    enviadosAgora.current.add(sel + "|" + txt);
     setMsgs(m => [...m, nova]);
     setConversas(c => c.map(cv => cv.numero === sel
       ? { ...cv, ultimaMensagem: txt, timestamp: nova.timestamp } : cv));
@@ -91,7 +114,13 @@ export default function WhatsAppConversas() {
     const channel = supabase.channel("wpp_inbox_rt2")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_inbox" }, (payload) => {
         const nova = payload.new as Msg;
+        // o que o próprio painel acabou de enviar já está na tela
+        if (nova.tipo === "enviada" && enviadosAgora.current.has(nova.numero + "|" + nova.mensagem)) {
+          enviadosAgora.current.delete(nova.numero + "|" + nova.mensagem);
+          return;
+        }
         setConversas(prev => {
+          if (!prev.some(c => c.numero === nova.numero)) setTimeout(carregarConversas, 1500); // contato novo: busca nome e foto
           const exist = prev.find(c => c.numero === nova.numero);
           const filtered = prev.filter(c => c.numero !== nova.numero);
           return [{
@@ -183,7 +212,7 @@ export default function WhatsAppConversas() {
                 borderBottom: "1px solid var(--border)",
               }}>
                 <div style={{
-                  width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                  width: 42, height: 42, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
                   background: ativo ? "rgba(255,255,255,0.2)" : "var(--surface)",
                   border: ativo ? "1.5px solid rgba(255,255,255,0.35)" : "1px solid var(--border)",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -191,7 +220,7 @@ export default function WhatsAppConversas() {
                   color: ativo ? "#fff" : "var(--primary)",
                   transition: "all 0.2s",
                 }}>
-                  {avatar(c.nome)}
+                  <Avatar nome={c.nome} foto={c.foto} size={42} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
@@ -235,15 +264,15 @@ export default function WhatsAppConversas() {
           <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)",
             background: "var(--bg-sidebar)", display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--primary)",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
               fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-              {avatar(convSel?.nome || sel)}
+              <Avatar nome={convSel?.nome || sel} foto={convSel?.foto} size={38} />
             </div>
             <div>
               <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: 0 }}>
                 {convSel?.nome || sel}
               </p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{sel}</p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{fmtNumero(sel)}</p>
             </div>
           </div>
 

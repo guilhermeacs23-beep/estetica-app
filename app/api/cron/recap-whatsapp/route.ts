@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { configurado, enviarTexto } from "@/lib/whatsapp";
 
-const EVO_URL = process.env.EVOLUTION_API_URL ?? "";
-const EVO_KEY = process.env.EVOLUTION_API_KEY ?? "";
-const INSTANCE = process.env.EVOLUTION_INSTANCE ?? "studiorpm";
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
 async function enviarWpp(telefone: string, mensagem: string) {
-  if (!EVO_URL || !EVO_KEY) return false;
-  const tel = telefone.replace(/\D/g, "");
-  const numero = tel.startsWith("55") ? tel : `55${tel}`;
-  try {
-    const r = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
-      body: JSON.stringify({ number: numero, text: mensagem }),
-    });
-    return r.ok;
-  } catch { return false; }
+  if (!configurado()) return false;
+  return (await enviarTexto(telefone, mensagem)).ok;
 }
 
 export async function GET(req: NextRequest) {

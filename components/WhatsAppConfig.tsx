@@ -103,7 +103,7 @@ export default function WhatsAppConfig() {
       if (d.base64) {
         setQrCode(d.base64);
       } else {
-        setQrCode("debug:" + JSON.stringify(d).slice(0, 300));
+        setQrCode("debug:" + (d?.error ? "O servidor do WhatsApp não respondeu. Tente de novo em instantes." : "Gerando o código… aguarde alguns segundos."));
       }
     } catch { /* silencioso */ }
   }
@@ -210,9 +210,8 @@ export default function WhatsAppConfig() {
             style={{ background:"var(--bg)", border:"1px solid var(--border)" }}>
             <p className="text-sm font-semibold" style={{ color:"var(--text)" }}>Escaneie com o WhatsApp</p>
             {qrCode.startsWith("debug:") ? (
-              <div className="text-xs p-3 rounded w-full"
-                style={{ background:"#1a1a2e", color:"#ff6b6b", fontFamily:"monospace", wordBreak:"break-all" }}>
-                <strong>Resposta bruta da API:</strong><br/>{qrCode.replace("debug:", "")}
+              <div className="text-sm p-3 rounded w-full text-center" style={{ color:"var(--text-muted)" }}>
+                {qrCode.replace("debug:", "")}
               </div>
             ) : (
               <img src={qrCode.startsWith("data:") ? qrCode : ("data:image/png;base64," + qrCode)}

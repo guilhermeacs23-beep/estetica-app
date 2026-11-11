@@ -46,6 +46,20 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Nome e foto do contato (whatsapp_contatos) por cima do que veio na mensagem.
+  const numeros = Array.from(map.keys());
+  if (numeros.length) {
+    const { data: contatos } = await supabaseAdmin
+      .from("whatsapp_contatos").select("numero, nome, foto_url")
+      .eq("tenant_id", tenantId).in("numero", numeros);
+    for (const c of contatos ?? []) {
+      const conv = map.get(c.numero) as any;
+      if (!conv) continue;
+      if (c.nome) conv.nome = c.nome;
+      conv.foto = c.foto_url ?? null;
+    }
+  }
+
   return NextResponse.json({ conversas: Array.from(map.values()) });
 }
 
