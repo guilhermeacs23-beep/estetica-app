@@ -58,7 +58,16 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
   const descontoNum = parseFloat(desconto) || 0;
   const valorFinal = Math.max(0, totalServicos - descontoNum);
 
+  // Mesma regra que decide se a tela mostra os campos de veículo novo. Antes o
+  // envio olhava só o botão "Novo Veiculo": com cliente sem veículo (ou cliente
+  // novo) os campos apareciam, mas o veículo não era criado e ia "" para o banco.
+  const veiculoNovo = !clienteId || novoVeiculo || novoCliente || veiculos.length === 0;
+
   async function handleSubmit() {
+    if (!novoCliente && !clienteId) { alert("Selecione o cliente."); return; }
+    if (novoCliente && !nomeCliente.trim()) { alert("Informe o nome do cliente."); return; }
+    if (veiculoNovo && !placa.trim()) { alert("Informe a placa do veículo."); return; }
+    if (!veiculoNovo && !veiculoId) { alert("Selecione o veículo."); return; }
     setLoading(true);
     const res = await fetch("/api/ordens-servico", {
       method: "POST",
@@ -67,8 +76,8 @@ export default function NovaOSForm({ tenantId, userId, clientes, servicos, forma
         tenantId, userId,
         clienteId: novoCliente ? null : clienteId,
         novoCliente: novoCliente ? { nome: nomeCliente, telefone: telCliente, whatsapp: telCliente } : null,
-        veiculoId: novoVeiculo ? null : veiculoId,
-        novoVeiculo: novoVeiculo ? { placa: placa.toUpperCase(), modelo, marca, cor, ano: ano ? parseInt(ano) : null } : null,
+        veiculoId: veiculoNovo ? null : (veiculoId || null),
+        novoVeiculo: veiculoNovo ? { placa: placa.toUpperCase(), modelo, marca, cor, ano: ano ? parseInt(ano) : null } : null,
         checklist: { ...checklist, observacoes: obsChecklist },
         itens: itensOS, dataEntrada, horaEntrada, observacoes: obs,
         formaPagamentoId, desconto: descontoNum, valorTotal: totalServicos, valorFinal,
