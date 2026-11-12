@@ -73,6 +73,13 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  if (action === "reiniciar") {
+    // Sessão "open" que parou de receber (Baileys trava calado): reinicia sem QR.
+    const r = await evo(`/instance/restart/${INSTANCE}`, "POST");
+    const r2 = r.ok ? r : await evo(`/instance/restart/${INSTANCE}`, "PUT");
+    return NextResponse.json({ ok: r2.ok, status: r2.status, dado: r2.dado });
+  }
+
   if (action === "desconectar" && u.role === "owner") {
     const r = await evo(`/instance/logout/${INSTANCE}`, "DELETE");
     return NextResponse.json({ ok: r.ok });
