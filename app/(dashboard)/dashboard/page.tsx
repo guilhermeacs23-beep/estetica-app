@@ -82,6 +82,13 @@ export default async function DashboardPage() {
     .eq("tenant_id", profile?.tenant_id ?? "");
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  // Conversão WhatsApp -> OS por semana (coorte da semana em que a conversa começou).
+  const { data: conv } = await supabaseAdmin.rpc("conversao_semanal", { p_tenant: profile?.tenant_id, p_semanas: 2 });
+  const semAtual = (conv as any)?.semanas?.[0];
+  const semAnt = (conv as any)?.semanas?.[1];
+  const pct = (v: number | null | undefined) => v == null ? "—" : `${String(v).replace(".", ",")}%`;
+  const dm = (iso?: string) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "";
+
   return (
     <div className="flex flex-col gap-6 max-w-6xl">
       <div>
@@ -105,6 +112,39 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Conversão da semana: WhatsApp -> OS (cor da Valora, para destacar do resto) */}
+      {semAtual && (
+        <div className="rounded-2xl p-5 text-white grid gap-4 md:grid-cols-[1.2fr_1fr_1fr]"
+          style={{ background: "linear-gradient(135deg,#2ea8ff 0%,#0d6fc0 70%,#0a4f8f 100%)",
+            boxShadow: "0 10px 30px rgba(13,111,192,.30)" }}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ opacity: .85 }}>
+              Conversão WhatsApp → OS · semana {dm(semAtual.semana_inicio)}
+            </p>
+            <p className="text-4xl font-bold mt-1">{pct(semAtual.taxa_conversao_pct)}</p>
+            <p className="text-sm mt-1" style={{ opacity: .9 }}>
+              {semAtual.conversas_novas} conversas novas · {semAtual.conversas_convertidas} viraram OS
+            </p>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,.12)" }}>
+            <p className="text-xs" style={{ opacity: .85 }}>Semana anterior ({dm(semAnt?.semana_inicio)})</p>
+            <p className="text-2xl font-bold">{pct(semAnt?.taxa_conversao_pct)}</p>
+            <p className="text-xs mt-0.5" style={{ opacity: .9 }}>
+              {semAnt?.conversas_novas ?? 0} conversas
+              {semAnt?.os_semanas_seguintes ? ` · +${semAnt.os_semanas_seguintes} OS vieram depois` : ""}
+            </p>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,.12)" }}>
+            <p className="text-xs" style={{ opacity: .85 }}>OS sem conversa no WhatsApp</p>
+            <p className="text-2xl font-bold">{semAtual.os_sem_origem_whatsapp}</p>
+            <p className="text-xs mt-0.5" style={{ opacity: .9 }}>balcão, indicação ou telefone diferente</p>
+          </div>
+          <p className="text-[11px] md:col-span-3" style={{ opacity: .75 }}>
+            A OS conta para a semana em que a conversa começou, mesmo se abrir depois. Histórico do WhatsApp desde 11/11/2026.
+          </p>
+        </div>
+      )}
 
       {/* KPIs — linha 2: base de dados */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

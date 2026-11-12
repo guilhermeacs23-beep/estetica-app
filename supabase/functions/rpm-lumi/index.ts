@@ -73,6 +73,9 @@ const FERRAMENTAS = [
     parameters: { type: "object", properties: {
       de: { type: "string", description: "AAAA-MM-DD" }, ate: { type: "string", description: "AAAA-MM-DD" } },
       required: ["de", "ate"] } } },
+  { type: "function", function: { name: "conversao_semanal",
+    description: "Taxa de conversão semanal do WhatsApp em OS, por semana (segunda a domingo): conversas novas, quantas viraram OS, OS na mesma semana, OS que vieram nas semanas seguintes (contam para a semana em que a conversa começou), OS sem origem no WhatsApp, e a mediana de dias entre a conversa e a OS. Use para conversão, 'quantos contatos viraram serviço', funil do WhatsApp.",
+    parameters: { type: "object", properties: { semanas: { type: "number", description: "quantas semanas para trás, padrão 4" } } } } },
   { type: "function", function: { name: "orcamentos_abertos",
     description: "Orçamentos que ainda não viraram OS nem foram recusados: cliente, carro, valor, validade.",
     parameters: { type: "object", properties: {} } } },
@@ -153,6 +156,11 @@ async function executar(tenant: string, nome: string, a: Record<string, any>): P
           count(distinct numero) filter (where tipo='recebida') as contatos_que_escreveram
         from lumi.v_whatsapp where dia between '${de}' and '${ate}' group by dia order by dia`);
     }
+    case "conversao_semanal": {
+      const { data: r, error } = await db.rpc("conversao_semanal",
+        { p_tenant: tenant, p_semanas: Math.max(1, Math.min(26, Number(a.semanas) || 4)) });
+      return error ? { erro: error.message } : r;
+    }
     case "orcamentos_abertos":
       return await consulta(tenant, `select orcamento, criado_em, validade, status, cliente, modelo, valor_total
         from lumi.v_orcamentos where not virou_os and coalesce(status,'') not in ('recusado','aprovado')
@@ -196,6 +204,15 @@ anterior (comparativo_mes faz isso). Diga que a comparação é essa.
 A loja começou a lançar OS no sistema em novembro de 2026. Se os números forem
 pequenos ou zerados, diga isso de forma natural ("ainda tem pouca OS lançada")
 em vez de tirar conclusão de amostra pequena.
+
+=== CONVERSÃO ===
+Na conversão semanal, explique em uma linha a regra quando ele perguntar pela
+primeira vez: a OS conta para a semana em que a conversa começou, mesmo que
+abra depois; OS sem conversa no WhatsApp aparece à parte. O WhatsApp só tem
+histórico desde 11/11/2026 — nas primeiras semanas a taxa sai mais baixa.
+
+=== EMPATES E LISTAS ===
+Se dois itens empatarem (mesmo preço, mesmo valor), cite todos.
 
 === INFORMAR, NÃO DECIDIR ===
 Mostre o número e a leitura dele. A decisão é dele. Se ele pedir sua opinião,
