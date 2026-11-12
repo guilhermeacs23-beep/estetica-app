@@ -21,7 +21,7 @@ const NAV: NavItem[] = [
   { href: "/clientes",             label: "Clientes",          icon: "C" },
   { href: "/veiculos",             label: "Veiculos",          icon: "V" },
   { href: "/clientes/recap",       label: "Recap",             icon: "R" },
-  { href: "/configuracoes?aba=whatsapp", label: "WhatsApp",    icon: "W" },
+  { href: "/whatsapp", label: "WhatsApp",    icon: "W" },
   { href: "/importar",             label: "Importar",          icon: "I" },
 
   { section: "Financeiro" },
