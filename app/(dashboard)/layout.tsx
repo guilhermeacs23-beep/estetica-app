@@ -5,6 +5,7 @@ import SidebarClient from "@/components/SidebarClient";
 import MobileHeader from "@/components/MobileHeader";
 import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingWizard from "@/components/OnboardingWizard";
+import LumiBalao from "@/components/LumiBalao";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -54,6 +55,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        {/* Lumi: só o dono vê (a função confere de novo pelo login) */}
+        {profile?.role === "owner" && <LumiBalao nome={profile?.nome} />}
       </div>
     </div>
   );
