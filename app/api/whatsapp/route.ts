@@ -58,6 +58,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: r.ok && gravado === url, versao: r.versao, conferido: gravado === url });
   }
 
+  if (action === "diagnostico") {
+    // O que a Evolution tem de verdade: webhook gravado (sem o token) e as últimas mensagens.
+    const wh = await evo(`/webhook/find/${INSTANCE}`);
+    const w = wh.dado as any;
+    const msgs = await evo(`/chat/findMessages/${INSTANCE}`, "POST", { where: {}, limit: 5 });
+    const m = msgs.dado as any;
+    const lista = (m?.messages?.records ?? m?.records ?? (Array.isArray(m) ? m : [])) as any[];
+    return NextResponse.json({
+      webhook: w ? { enabled: w.enabled ?? w.webhook?.enabled, url: String(w.url ?? w.webhook?.url ?? "").split("?")[0],
+        events: w.events ?? w.webhook?.events, atualizado: w.updatedAt ?? null } : wh.status,
+      ultimas: lista.slice(0, 5).map((x: any) => ({ quando: x.messageTimestamp, deMim: x.key?.fromMe, tipo: x.messageType })),
+      total: m?.messages?.total ?? m?.total ?? null,
+    });
+  }
+
   if (action === "desconectar" && u.role === "owner") {
     const r = await evo(`/instance/logout/${INSTANCE}`, "DELETE");
     return NextResponse.json({ ok: r.ok });
