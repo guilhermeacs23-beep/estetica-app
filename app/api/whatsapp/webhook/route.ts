@@ -36,6 +36,13 @@ function extrairTexto(m: any): string | null {
   return null; // reações, edições, protocolos: não viram mensagem
 }
 
+async function marcarLidas(tenantId: string, numero: string, ate?: string) {
+  let q = supabaseAdmin.from("whatsapp_inbox").update({ lida: true })
+    .eq("tenant_id", tenantId).eq("numero", numero).eq("tipo", "recebida").eq("lida", false);
+  if (ate) q = q.lte("timestamp", ate);
+  await q;
+}
+
 async function tenantDaInstancia(instancia: string): Promise<string | null> {
   const { data } = await supabaseAdmin
     .from("configuracoes").select("tenant_id").eq("wpp_instancia", instancia).maybeSingle();
@@ -51,10 +58,21 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); } catch { return NextResponse.json({ ok: true }); }
 
   const evento = String(body?.event ?? "").toLowerCase().replace(/_/g, ".");
-  if (evento !== "messages.upsert") return NextResponse.json({ ok: true, ignorado: evento });
+  if (evento !== "messages.upsert" && evento !== "chats.update") return NextResponse.json({ ok: true, ignorado: evento });
 
   const tenantId = await tenantDaInstancia(String(body?.instance ?? INSTANCE));
   if (!tenantId) return NextResponse.json({ ok: false, error: "instância sem empresa" }, { status: 200 });
+
+  // Conversa lida no celular: o WhatsApp avisa que zerou as não lidas daquele chat.
+  if (evento === "chats.update") {
+    const chats: any[] = Array.isArray(body?.data) ? body.data : [body?.data];
+    for (const ch of chats) {
+      const jid: string = ch?.remoteJid ?? ch?.id ?? "";
+      const zerou = ch?.unreadMessages === 0 || ch?.unreadCount === 0;
+      if (jid.endsWith("@s.whatsapp.net") && zerou) await marcarLidas(tenantId, jid.replace("@s.whatsapp.net", ""));
+    }
+    return NextResponse.json({ ok: true });
+  }
 
   const lista: any[] = Array.isArray(body?.data) ? body.data : (body?.data?.messages ?? [body?.data]);
   const linhas: Record<string, unknown>[] = [];
@@ -98,6 +116,11 @@ export async function POST(req: NextRequest) {
   const { error } = await supabaseAdmin
     .from("whatsapp_inbox")
     .upsert(linhas, { onConflict: "tenant_id,wa_id", ignoreDuplicates: true });
+
+  // Respondeu pelo celular = leu: o que o cliente mandou antes disso sai de "não lida".
+  for (const l of linhas) {
+    if (l.tipo === "enviada") await marcarLidas(tenantId, String(l.numero), String(l.timestamp));
+  }
 
   // 200 mesmo com erro: senão a Evolution reenvia em loop. O erro fica no log da Vercel.
   if (error) console.error("webhook whatsapp:", error.message);

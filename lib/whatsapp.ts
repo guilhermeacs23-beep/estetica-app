@@ -96,8 +96,8 @@ export async function enviarTexto(telefone: string, texto: string) {
 export async function configurarWebhook(url: string) {
   const v = await versaoServidor();
   const corpo = v.startsWith("1")
-    ? { url, enabled: true, webhook_by_events: false, webhook_base64: false, events: ["MESSAGES_UPSERT"] }
-    : { webhook: { enabled: true, url, byEvents: false, base64: false, events: ["MESSAGES_UPSERT"] } };
+    ? { url, enabled: true, webhook_by_events: false, webhook_base64: false, events: ["MESSAGES_UPSERT", "CHATS_UPDATE"] }
+    : { webhook: { enabled: true, url, byEvents: false, base64: false, events: ["MESSAGES_UPSERT", "CHATS_UPDATE"] } };
   const r = await evo(`/webhook/set/${INSTANCE}`, "POST", corpo);
   return { ...r, versao: v };
 }
